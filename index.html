@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASH-PEMA LMIS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --navy: #0a1628;
+    --navy-mid: #132240;
+    --navy-light: #1e3a5f;
+    --accent: #00c2a8;
+    --accent-dim: #00c2a820;
+    --accent-hover: #00e5c8;
+    --gold: #e8b84b;
+    --text: #e8edf5;
+    --text-dim: #7a8fa8;
+    --surface: #0f1e35;
+    --surface2: #162840;
+    --border: #1e3a5f;
+    --red: #ff4d6a;
+    --green: #00d4a0;
+    --yellow: #f5c842;
+    --gold-badge: #f0a500;
+    --radius: 8px;
+    --radius-lg: 14px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* ── GITHUB CONFIG SCREEN ── */
+  #configScreen {
+    position:fixed; inset:0; background:var(--navy);
+    display:flex; align-items:center; justify-content:center;
+    z-index:9999; flex-direction:column; gap:24px;
+  }
+  .config-box {
+    background:var(--navy-mid); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:40px 44px; width:460px; max-width:95vw;
+  }
+  .config-title { font-family:'Playfair Display',serif; font-size:22px; margin-bottom:6px; }
+  .config-sub   { color:var(--text-dim); font-size:13px; line-height:1.6; margin-bottom:28px; }
+  .config-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px;
+                  color:var(--text-dim); margin-bottom:6px; display:block; }
+  .config-inp   { width:100%; background:var(--surface); border:1px solid var(--border);
+                  border-radius:var(--radius); color:var(--text); font-family:'DM Mono',monospace;
+                  font-size:13px; padding:10px 14px; margin-bottom:18px; outline:none; }
+  .config-inp:focus { border-color:var(--accent); }
+  .config-btn   { width:100%; background:var(--accent); color:#0a1628; font-weight:700;
+                  font-size:14px; padding:12px; border:none; border-radius:var(--radius);
+                  cursor:pointer; transition:.2s; }
+  .config-btn:hover { background:var(--accent-hover); }
+  .config-err   { color:var(--red); font-size:12px; margin-top:-12px; margin-bottom:12px; }
+  .config-note  { font-size:11px; color:var(--text-dim); line-height:1.7; margin-top:16px; }
+  .config-note a { color:var(--accent); }
+
+  /* ── LOADING OVERLAY ── */
+  #loadingOverlay {
+    position:fixed; inset:0; background:rgba(10,22,40,.88);
+    display:none; align-items:center; justify-content:center;
+    z-index:8888; flex-direction:column; gap:16px;
+  }
+  #loadingOverlay.show { display:flex; }
+  .spinner {
+    width:40px; height:40px;
+    border:3px solid var(--border);
+    border-top-color:var(--accent);
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loading-msg { color:var(--text-dim); font-size:13px; }
+
+  /* ── SYNC STATUS ── */
+  #syncBar {
+    position:fixed; bottom:0; left:0; right:0; height:3px;
+    background:transparent; z-index:7777; transition:.3s;
+  }
+  #syncBar.syncing { background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: syncAnim 1s ease-in-out infinite; }
+  @keyframes syncAnim { 0%,100%{opacity:.4} 50%{opacity:1} }
+  #syncBar.error { background:var(--red); }
+
+  #syncStatus {
+    position:fixed; bottom:12px; right:16px;
+    font-size:11px; color:var(--text-dim); font-family:'DM Mono',monospace;
+    display:flex; align-items:center; gap:6px; z-index:7778;
+  }
+  .sync-dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
+  .sync-dot.warn { background:var(--yellow); }
+  .sync-dot.err  { background:var(--red); }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: var(--navy-mid);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    transition: transform .3s ease;
+  }
+
+  .brand {
+    padding: 28px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .brand-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .brand-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
+  #menu {
+    flex: 1;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    list-style: none;
+    overflow-y: auto;
+  }
+
+  #menu li button {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-align: left;
+    transition: background .15s, color .15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #menu li button:hover  { background: var(--accent-dim); color: var(--text); }
+  #menu li button.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+
+  .sidebar-footer {
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #0a1628;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .sidebar-user  { font-size: 13px; font-weight: 600; }
+  .sidebar-role  { font-size: 10px; color: var(--text-dim); }
+  .btn-logout    { margin-left: auto; background: none; border: none;
+                   color: var(--text-dim); cursor: pointer; font-size: 18px; line-height: 1; }
+  .btn-logout:hover { color: var(--red); }
+
+  /* ── MAIN ── */
+  #main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .page-header { margin-bottom: 28px; }
+  .page-title  { font-family: 'Playfair Display', serif; font-size: 26px; }
+  .page-sub    { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
+
+  /* ── FORM ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+  .inp {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border .15s;
+    width: 100%;
+  }
+  .inp:focus { border-color: var(--accent); }
+  textarea.inp { resize: vertical; min-height: 72px; }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    background: var(--accent);
+    color: #0a1628;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 11px 24px;
+    cursor: pointer;
+    transition: background .15s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-sm {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(0,194,168,.25);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: .15s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { background: rgba(0,194,168,.25); }
+
+  .btn-ghost {
+    background: none;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 12px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: rgba(255,77,106,.12);
+    color: var(--red);
+    border: 1px solid rgba(255,77,106,.25);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  .btn-danger:hover { background: rgba(255,77,106,.25); }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(30,58,95,.4);
+    vertical-align: middle;
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .badge-blue   { background:rgba(91,143,255,.15); color:#5b8fff; }
+  .badge-gold   { background:rgba(232,184,75,.15);  color:var(--gold); }
+  .badge-yellow { background:rgba(245,200,66,.15);  color:var(--yellow); }
+  .badge-green  { background:rgba(0,212,160,.15);   color:var(--green); }
+  .badge-red    { background:rgba(255,77,106,.15);  color:var(--red); }
+  .badge-purple { background:rgba(180,100,255,.15); color:#b464ff; }
+  .badge-teal   { background:rgba(0,194,168,.15);   color:var(--accent); }
+
+  /* ── STATS ── */
+  .stats-row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:24px; }
+  .stat-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:16px 20px;
+    display:flex; align-items:center; gap:12px;
+    flex:1; min-width:140px;
+  }
+  .stat-icon { font-size:22px; }
+  .stat-num  { font-family:'Playfair Display',serif; font-size:22px; line-height:1; }
+  .stat-label{ font-size:11px; color:var(--text-dim); margin-top:3px; }
+
+  /* ── DATE FILTER ROW ── */
+  .filter-row {
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin-bottom:18px;
+    background:var(--surface); border:1px solid var(--border);
+    padding:12px 18px; border-radius:var(--radius);
+  }
+  .filter-row label { font-size:11px; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+  .filter-row .inp  { width:auto; padding:7px 12px; font-size:12px; }
+  .filter-row select.inp { padding:7px 12px; }
+
+  /* ── LOGIN ── */
+  #loginScreen {
+    position:fixed; inset:0; background:var(--navy);
+    display:flex; align-items:center; justify-content:center; z-index:500;
+  }
+  .login-box {
+    background:var(--navy-mid);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:40px 44px;
+    width:380px; max-width:95vw;
+  }
+  .login-brand { margin-bottom:28px; }
+  .login-title { font-family:'Playfair Display',serif; font-size:24px; margin-bottom:4px; }
+  .login-sub   { color:var(--text-dim); font-size:12px; }
+  .login-field { margin-bottom:16px; }
+  .login-label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px;
+                 color:var(--text-dim); display:block; margin-bottom:6px; }
+  #loginError  { color:var(--red); font-size:12px; min-height:16px; margin-bottom:8px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface2); border:1px solid var(--border);
+    color:var(--text); padding:10px 22px; border-radius:30px;
+    font-size:13px; opacity:0; transition:.3s; pointer-events:none; z-index:9000; white-space:nowrap;
+  }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.ok   { border-color:var(--accent); }
+  #toast.err  { border-color:var(--red); color:var(--red); }
+
+  /* ── MODAL ── */
+  #modalOverlay {
+    position:fixed; inset:0; background:rgba(0,0,0,.6);
+    display:none; align-items:center; justify-content:center; z-index:600;
+  }
+  #modalOverlay.show { display:flex; }
+  .modal {
+    background:var(--navy-mid); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:32px; width:480px; max-width:95vw;
+    max-height:85vh; overflow-y:auto;
+  }
+  .modal-title  { font-family:'Playfair Display',serif; font-size:20px; margin-bottom:16px; }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:24px; }
+
+  /* ── EXPORT ── */
+  .export-preview-table { max-height:320px; overflow-y:auto; margin-top:14px; }
+
+  /* ── USERS TABLE ── */
+  .user-card { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ── GITHUB CONFIG SCREEN ── -->
+<div id="configScreen">
+  <div class="config-box">
+    <div class="config-title">🔧 Connect to GitHub Database</div>
+    <div class="config-sub">
+      Enter your GitHub credentials to enable real-time cloud storage.<br>
+      This only needs to be done once per device.
+    </div>
+    <label class="config-label">GitHub Username</label>
+    <input id="cfgOwner" class="config-inp" placeholder="your-github-username" autocomplete="off">
+    <label class="config-label">Database Repository Name</label>
+    <input id="cfgRepo" class="config-inp" placeholder="pash-pema-db" autocomplete="off">
+    <label class="config-label">Personal Access Token</label>
+    <input id="cfgToken" class="config-inp" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+    <div id="cfgError" class="config-err"></div>
+    <button class="config-btn" onclick="saveConfig()">Connect & Continue →</button>
+    <div class="config-note">
+      ℹ️ Token needs <strong>repo</strong> scope only.<br>
+      <a href="https://github.com/settings/tokens/new" target="_blank">Generate token on GitHub →</a><br>
+      Your credentials are saved only in this browser (localStorage).
+    </div>
+  </div>
+</div>
+
+<!-- ── LOADING OVERLAY ── -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loadingMsg">Syncing with GitHub…</div>
+</div>
+
+<!-- ── SYNC STATUS ── -->
+<div id="syncBar"></div>
+<div id="syncStatus" style="display:none;">
+  <div class="sync-dot" id="syncDot"></div>
+  <span id="syncText">Synced</span>
+</div>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen" style="display:none;">
+  <div class="login-box">
+    <div class="login-brand">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:4px;">LMIS</div>
+      <div class="login-title">PASH-PEMA</div>
+      <div class="login-sub">Laboratory Management Information System</div>
+    </div>
+    <div class="login-field">
+      <label class="login-label">Username</label>
+      <input id="username" class="inp" type="text" placeholder="Enter username" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Password</label>
+      <input id="password" class="inp" type="password" placeholder="Enter password">
+    </div>
+    <div id="loginError"></div>
+    <button class="btn-primary" style="width:100%;justify-content:center;" onclick="login()">Sign In →</button>
+  </div>
+</div>
+
+<!-- ── APP SHELL ── -->
+<div id="sidebar" style="display:none;">
+  <div class="brand">
+    <div class="brand-label">LMIS</div>
+    <div class="brand-name">PASH-PEMA</div>
+    <div class="brand-sub">Lab Management System</div>
+  </div>
+  <ul id="menu"></ul>
+  <div class="sidebar-footer">
+    <div class="avatar" id="avatarInitial">A</div>
+    <div>
+      <div class="sidebar-user" id="sidebarUser">Admin</div>
+      <div class="sidebar-role" id="sidebarRole">Administrator</div>
+    </div>
+    <button class="btn-logout" onclick="logout()" title="Logout">⏏</button>
+  </div>
+</div>
+
+<div id="main" style="flex:0;">
+
+  <!-- NEW SAMPLE -->
+  <div class="panel" id="sample">
+    <div class="page-header">
+      <div class="page-title">New Sample Registration</div>
+      <div class="page-sub">Register a new sample and record payment details</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🧪 Sample Information</div>
+      <div class="grid2" style="margin-bottom:18px;">
+        <div class="field"><label>Sample / Patient Name *</label><input id="sampleName" class="inp" placeholder="e.g. John Doe – Blood CBC"></div>
+        <div class="field"><label>Collection Date *</label><input id="date" class="inp" type="date"></div>
+      </div>
+      <div class="field" style="margin-bottom:18px;">
+        <label>Collection Location</label>
+        <input id="sampleLocation" class="inp" placeholder="e.g. Primary Health Centre, Anantnag">
+      </div>
+      <div class="field" style="margin-bottom:18px;">
+        <label>Sample Details / Test Type</label>
+        <textarea id="sampleDetails" class="inp" placeholder="Describe the sample, tests required, clinical notes…"></textarea>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">💳 Payment Details</div>
+      <div class="grid3">
+        <div class="field"><label>Amount Paid (Rs)</label><input id="payAmount" class="inp" type="number" placeholder="0"></div>
+        <div class="field"><label>Payment Method</label>
+          <select id="payMethod" class="inp">
+            <option value="">Select Method</option>
+            <option>Cash</option><option>Cheque</option>
+            <option>Bank Transfer</option><option>QR Code</option>
+            <option>UPI</option><option>Others</option>
+            <option>Not Specified</option>
+          </select>
+        </div>
+        <div class="field"><label>Transaction / Receipt Ref</label><input id="payRef" class="inp" placeholder="Optional reference"></div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="createSample()">⊕ Register Sample</button>
+  </div>
+
+  <!-- SAMPLE LIST -->
+  <div class="panel" id="list">
+    <div class="page-header">
+      <div class="page-title">Sample Records</div>
+      <div class="page-sub">View, filter and update sample statuses</div>
+    </div>
+    <div class="filter-row">
+      <label>From</label>
+      <input type="date" id="listDateFrom" class="inp" onchange="renderTable()">
+      <label>To</label>
+      <input type="date" id="listDateTo" class="inp" onchange="renderTable()">
+      <button class="btn-ghost" onclick="clearDates('listDateFrom','listDateTo','renderTable')">Clear</button>
+    </div>
+    <div class="stats-row" id="listStats"></div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Code</th><th>Sample Name</th><th>Date</th>
+            <th>Location</th><th>Collected By</th><th>Status</th><th>Update Status</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT ENTRY -->
+  <div class="panel" id="result">
+    <div class="page-header">
+      <div class="page-title">Result Entry</div>
+      <div class="page-sub">Enter test results and update sample status</div>
+    </div>
+    <div class="filter-row" style="margin-bottom:16px;">
+      <label>Filter</label>
+      <select id="resultFilter" class="inp" onchange="renderResultTable()">
+        <option value="all">All Samples</option>
+        <option value="pending">Pending Results</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Sample Name</th><th>Status</th><th>Result / Notes</th><th>Action</th></tr></thead>
+          <tbody id="resultTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORTS / VIEW -->
+  <div class="panel" id="view">
+    <div class="page-header">
+      <div class="page-title">Reports</div>
+      <div class="page-sub">View and download sample reports as PDF</div>
+    </div>
+    <div class="filter-row">
+      <label>From</label>
+      <input type="date" id="viewDateFrom" class="inp" onchange="renderViewTable()">
+      <label>To</label>
+      <input type="date" id="viewDateTo" class="inp" onchange="renderViewTable()">
+      <button class="btn-ghost" onclick="clearDates('viewDateFrom','viewDateTo','renderViewTable')">Clear</button>
+    </div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Sample Name</th><th>Collected By</th><th>Tested By</th><th>Status</th><th>Report</th></tr></thead>
+          <tbody id="viewTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAYMENT RECEIPTS -->
+  <div class="panel" id="receipts">
+    <div class="page-header">
+      <div class="page-title">Payment Receipts</div>
+      <div class="page-sub">Track payments and download individual receipts</div>
+    </div>
+    <div class="filter-row">
+      <label>From</label>
+      <input type="date" id="rcptDateFrom" class="inp" onchange="renderReceipts()">
+      <label>To</label>
+      <input type="date" id="rcptDateTo" class="inp" onchange="renderReceipts()">
+      <label>Search</label>
+      <input type="text" id="receiptSearch" class="inp" placeholder="Code or name…" oninput="renderReceipts()">
+      <button class="btn-ghost" onclick="clearDates('rcptDateFrom','rcptDateTo','renderReceipts')">Clear</button>
+    </div>
+    <div class="stats-row" id="receiptStats"></div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Sample Name</th><th>Date</th><th>Amount</th><th>Method</th><th>Ref</th><th>Collected By</th><th>Receipt</th></tr></thead>
+          <tbody id="receiptsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNTING -->
+  <div class="panel" id="accounting">
+    <div class="page-header">
+      <div class="page-title">Accounting</div>
+      <div class="page-sub">Financial overview and payment breakdown</div>
+    </div>
+    <div class="filter-row">
+      <label>From</label>
+      <input type="date" id="acctDateFrom" class="inp" onchange="renderAccounting()">
+      <label>To</label>
+      <input type="date" id="acctDateTo" class="inp" onchange="renderAccounting()">
+      <label>Method</label>
+      <select id="acctFilter" class="inp" onchange="renderAccounting()">
+        <option value="all">All Methods</option>
+        <option>Cash</option><option>Cheque</option><option>Bank Transfer</option>
+        <option>QR Code</option><option>UPI</option><option>Others</option>
+      </select>
+      <button class="btn-ghost" onclick="clearDates('acctDateFrom','acctDateTo','renderAccounting')">Clear</button>
+      <button class="btn-sm" onclick="downloadAccountingPDF()">⬇ PDF Report</button>
+    </div>
+    <div class="stats-row" id="acctStats"></div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Sample Name</th><th>Date</th><th>Amount</th><th>Method</th><th>Ref</th><th>Collected By</th><th>Payment Status</th></tr></thead>
+          <tbody id="acctTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE USER -->
+  <div class="panel" id="admin">
+    <div class="page-header">
+      <div class="page-title">Create User Account</div>
+      <div class="page-sub">Add a new staff member to the system</div>
+    </div>
+    <div class="card" style="max-width:500px;">
+      <div class="card-title">👤 New User</div>
+      <div class="field" style="margin-bottom:16px;"><label>Username</label><input id="newUser" class="inp" placeholder="e.g. dr_raheem"></div>
+      <div class="field" style="margin-bottom:16px;"><label>Password</label><input id="newPass" class="inp" type="password" placeholder="Set a strong password"></div>
+      <div class="field" style="margin-bottom:24px;"><label>Role</label>
+        <select id="role" class="inp">
+          <option value="entry">Sample Entry</option>
+          <option value="result">Result Entry</option>
+          <option value="view">View Only</option>
+          <option value="admin">Administrator</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="createUser()">Create Account</button>
+    </div>
+  </div>
+
+  <!-- MANAGE USERS -->
+  <div class="panel" id="users">
+    <div class="page-header">
+      <div class="page-title">Manage Users</div>
+      <div class="page-sub">View accounts, set permissions, reset passwords</div>
+    </div>
+    <div class="card" style="padding:0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Username</th><th>Role</th><th>Password</th><th>Screen Permissions</th><th>Reset PW</th><th>Remove</th></tr></thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT TO EXCEL -->
+  <div class="panel" id="export">
+    <div class="page-header">
+      <div class="page-title">Export to Excel</div>
+      <div class="page-sub">Download sample records as a spreadsheet</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📥 Date Range Filter</div>
+      <div class="filter-row" style="margin-bottom:0;">
+        <label>From</label>
+        <input type="date" id="exportDateFrom" class="inp" oninput="previewExportCount()">
+        <label>To</label>
+        <input type="date" id="exportDateTo" class="inp" oninput="previewExportCount()">
+        <button class="btn-ghost" onclick="document.getElementById('exportDateFrom').value='';document.getElementById('exportDateTo').value='';previewExportCount()">Clear</button>
+        <button class="btn-primary" onclick="exportToExcel()">⬇ Download Excel</button>
+      </div>
+      <div id="exportPreviewText" style="margin-top:18px;font-size:13px;color:var(--text-dim);"></div>
+    </div>
+    <div class="card" style="padding:0;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;" id="exportTableTitle">Preview</div>
+      <div class="table-wrap export-preview-table">
+        <table>
+          <thead><tr><th>Code</th><th>Name</th><th>Date</th><th>Location</th><th>Status</th><th>Collected By</th><th>Amount</th><th>Method</th></tr></thead>
+          <tbody id="exportPreviewTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modalOverlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+// ══════════════════════════════════════════════════════
+//  GITHUB DATABASE LAYER
+// ══════════════════════════════════════════════════════
+
+const GH = {
+  owner: '', repo: '', token: '',
+  baseUrl() { return `https://api.github.com/repos/${this.owner}/${this.repo}/contents/`; },
+
+  headers() {
+    return {
+      'Authorization': `token ${this.token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json',
+    };
+  },
+
+  async getFile(path) {
+    const r = await fetch(this.baseUrl() + path, { headers: this.headers() });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`GitHub GET ${path}: ${r.status}`);
+    const d = await r.json();
+    return { content: JSON.parse(atob(d.content.replace(/\n/g,''))), sha: d.sha };
+  },
+
+  async putFile(path, content, sha) {
+    const body = {
+      message: `update ${path} ${new Date().toISOString()}`,
+      content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
+    };
+    if (sha) body.sha = sha;
+    const r = await fetch(this.baseUrl() + path, {
+      method: 'PUT', headers: this.headers(), body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(()=>({}));
+      throw new Error(err.message || `GitHub PUT ${path}: ${r.status}`);
+    }
+    const d = await r.json();
+    return d.content.sha;
+  },
+
+  async testConnection() {
+    const r = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}`, { headers: this.headers() });
+    return r.ok;
+  }
+};
+
+// In-memory cache + sha tracking
+let dbCache = { users: null, samples: null, meta: null };
+let dbSha   = { users: null, samples: null, meta: null };
+let syncQueue = {};  // pending writes
+let syncTimer = null;
+
+// ── CONFIG ──
+function loadConfig() {
+  const cfg = localStorage.getItem('gh_config');
+  if (!cfg) return false;
+  const { owner, repo, token } = JSON.parse(cfg);
+  if (!owner || !repo || !token) return false;
+  GH.owner = owner; GH.repo = repo; GH.token = token;
+  return true;
+}
+
+async function saveConfig() {
+  const owner = document.getElementById('cfgOwner').value.trim();
+  const repo  = document.getElementById('cfgRepo').value.trim();
+  const token = document.getElementById('cfgToken').value.trim();
+  const errEl = document.getElementById('cfgError');
+  errEl.textContent = '';
+  if (!owner || !repo || !token) { errEl.textContent = 'All fields are required.'; return; }
+  GH.owner = owner; GH.repo = repo; GH.token = token;
+  showLoading('Testing connection…');
+  const ok = await GH.testConnection().catch(()=>false);
+  if (!ok) {
+    hideLoading();
+    errEl.textContent = 'Could not connect. Check username, repo name, and token.';
+    return;
+  }
+  localStorage.setItem('gh_config', JSON.stringify({ owner, repo, token }));
+  document.getElementById('configScreen').style.display = 'none';
+  await initDB();
+}
+
+// ── INIT DB ──
+async function initDB() {
+  showLoading('Loading data from GitHub…');
+  try {
+    const [u, s, m] = await Promise.all([
+      GH.getFile('users.json'),
+      GH.getFile('samples.json'),
+      GH.getFile('meta.json'),
+    ]);
+
+    if (!u) {
+      // First time: create default data
+      const defaultUsers = { admin: { password:'admin123', role:'admin' } };
+      const defaultSamples = {};
+      const defaultMeta = { sampleCounter: 0 };
+      dbSha.users   = await GH.putFile('users.json',   defaultUsers,   null);
+      dbSha.samples = await GH.putFile('samples.json', defaultSamples, null);
+      dbSha.meta    = await GH.putFile('meta.json',    defaultMeta,    null);
+      dbCache.users   = defaultUsers;
+      dbCache.samples = defaultSamples;
+      dbCache.meta    = defaultMeta;
+    } else {
+      dbCache.users   = u.content;   dbSha.users   = u.sha;
+      dbCache.samples = s ? s.content : {};  dbSha.samples = s ? s.sha : null;
+      dbCache.meta    = m ? m.content : { sampleCounter:0 }; dbSha.meta = m ? m.sha : null;
+    }
+
+    hideLoading();
+    setSyncStatus('ok', 'Synced');
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('syncStatus').style.display = 'flex';
+
+    // Auto-refresh every 30s
+    setInterval(refreshFromGitHub, 30000);
+
+  } catch(e) {
+    hideLoading();
+    setSyncStatus('err', 'Sync error');
+    alert('Error connecting to GitHub database:\n' + e.message + '\n\nPlease check your config.');
+    document.getElementById('configScreen').style.display = 'flex';
+  }
+}
+
+// ── READ / WRITE helpers (replace localStorage) ──
+function dbGet(key) {
+  return dbCache[key] || (key === 'samples' ? {} : key === 'users' ? {} : {});
+}
+
+async function dbSet(key, value) {
+  dbCache[key] = value;
+  syncQueue[key] = value;
+  scheduleSave();
+}
+
+function scheduleSave() {
+  clearTimeout(syncTimer);
+  setSyncStatus('warn', 'Saving…');
+  syncTimer = setTimeout(flushSave, 800);
+}
+
+async function flushSave() {
+  const keys = Object.keys(syncQueue);
+  if (!keys.length) return;
+  setSyncStatus('syncing', 'Syncing…');
+  document.getElementById('syncBar').className = 'syncing';
+  const toWrite = { ...syncQueue };
+  syncQueue = {};
+  try {
+    for (const key of keys) {
+      dbSha[key] = await GH.putFile(key + '.json', toWrite[key], dbSha[key]);
+    }
+    setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString());
+    document.getElementById('syncBar').className = '';
+  } catch(e) {
+    // Conflict (someone else saved): refresh and retry
+    if (e.message && e.message.includes('409')) {
+      await refreshFromGitHub();
+      toast('Conflict resolved — retrying save', 'ok');
+      // Re-queue
+      Object.assign(syncQueue, toWrite);
+      scheduleSave();
+    } else {
+      setSyncStatus('err', 'Save failed');
+      document.getElementById('syncBar').className = 'error';
+      toast('Sync error: ' + e.message, 'err');
+    }
+  }
+}
+
+async function refreshFromGitHub() {
+  if (Object.keys(syncQueue).length > 0) return; // don't refresh mid-save
+  try {
+    const [u, s, m] = await Promise.all([
+      GH.getFile('users.json'),
+      GH.getFile('samples.json'),
+      GH.getFile('meta.json'),
+    ]);
+    if (u) { dbCache.users = u.content; dbSha.users = u.sha; }
+    if (s) { dbCache.samples = s.content; dbSha.samples = s.sha; }
+    if (m) { dbCache.meta = m.content; dbSha.meta = m.sha; }
+    setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString());
+  } catch(e) {
+    setSyncStatus('err', 'Refresh failed');
+  }
+}
+
+function setSyncStatus(type, msg) {
+  const dot  = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (type==='err'?' err':type==='warn'?' warn':'');
+  text.textContent = msg;
+}
+
+function showLoading(msg) {
+  document.getElementById('loadingMsg').textContent = msg || 'Loading…';
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+// ══════════════════════════════════════════════════════
+//  APP LOGIC  (unchanged, but uses dbGet/dbSet instead of localStorage)
+// ══════════════════════════════════════════════════════
+
+const ALL_STATUSES = [
+  'Sample Sent to Lab', 'Sample Received at Lab', 'Under-Process', 'Completed'
+];
+const RESULT_STATUSES = ['Sample Received at Lab', 'Under-Process', 'Completed'];
+
+function statusBadge(status){
+  const map = {
+    'Sample Sent to Lab':     'badge-blue',
+    'Sample Received at Lab': 'badge-gold',
+    'Under-Process':          'badge-yellow',
+    'Completed':              'badge-green',
+  };
+  return `<span class="badge ${map[status]||'badge-blue'}"><span class="dot"></span>${status}</span>`;
+}
+function statusOptions(list, current){
+  return list.map(s=>`<option ${s===current?'selected':''}>${s}</option>`).join('');
+}
+
+let currentUser='', currentRole='';
+const DEFAULT_PERMS = { sample:'none', list:'none', result:'none', view:'none', receipts:'none', accounting:'none' };
+let currentPerms = {};
+
+function login(){
+  const users = dbGet('users');
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if(users[u] && users[u].password===p){
+    currentUser=u; currentRole=users[u].role;
+    currentPerms=users[u].permissions||{...DEFAULT_PERMS};
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main').style.flex='1';
+    document.getElementById('avatarInitial').textContent=u[0].toUpperCase();
+    document.getElementById('sidebarUser').textContent=u;
+    document.getElementById('sidebarRole').textContent=labelRole(currentRole);
+    setupMenu();
+  } else {
+    document.getElementById('loginError').textContent='Invalid username or password.';
+  }
+}
+
+function logout(){ location.reload(); }
+function labelRole(r){ return {admin:'Administrator',entry:'Sample Entry',result:'Result Entry',view:'View Only'}[r]||r; }
+
+const SCREENS = [
+  {id:'sample',label:'New Sample',icon:'🧪'},
+  {id:'list',label:'Sample Records',icon:'📋'},
+  {id:'result',label:'Result Entry',icon:'📝'},
+  {id:'view',label:'Reports',icon:'📄'},
+  {id:'receipts',label:'Payment Receipts',icon:'🧾'},
+  {id:'accounting',label:'Accounting',icon:'💰'},
+];
+
+function getPerms(u){ return dbGet('users')[u]?.permissions||{...DEFAULT_PERMS}; }
+function canEdit(id){ return currentRole==='admin'||currentPerms[id]==='edit'; }
+function canView(id){ return currentRole==='admin'||currentPerms[id]==='edit'||currentPerms[id]==='view'; }
+
+const menuDefs = {
+  admin:{label:'Create User',icon:'👤'}, users:{label:'Manage Users',icon:'🛡️'},
+  sample:{label:'New Sample',icon:'🧪'}, list:{label:'Sample Records',icon:'📋'},
+  result:{label:'Result Entry',icon:'📝'}, view:{label:'Reports',icon:'📄'},
+  receipts:{label:'Payment Receipts',icon:'🧾'}, accounting:{label:'Accounting',icon:'💰'},
+  export:{label:'Export to Excel',icon:'📥'},
+};
+
+function setupMenu(){
+  let items = currentRole==='admin'
+    ? ['admin','users','sample','list','result','view','receipts','accounting','export']
+    : SCREENS.filter(s=>canView(s.id)).map(s=>s.id);
+  const el=document.getElementById('menu'); el.innerHTML='';
+  items.forEach(id=>{
+    const d=menuDefs[id]; const li=document.createElement('li');
+    const ro=(currentRole!=='admin')&&!canEdit(id);
+    li.innerHTML=`<button id="mbtn_${id}" onclick="show('${id}')">${d.icon} ${d.label}${ro?' <span style="font-size:9px;color:var(--text-dim);margin-left:4px;">VIEW</span>':''}</button>`;
+    el.appendChild(li);
+  });
+  if(items.length) show(items[0]);
+}
+
+function applyReadOnly(id){
+  const panel=document.getElementById(id); if(!panel) return;
+  const editable=canEdit(id);
+  panel.querySelectorAll('input,textarea,select').forEach(el=>{
+    el.disabled=!editable; el.style.opacity=editable?'':'0.55'; el.style.cursor=editable?'':'not-allowed';
+  });
+  panel.querySelectorAll('button.btn-sm,button.btn-danger').forEach(el=>{
+    el.disabled=!editable; el.style.opacity=editable?'':'0.4'; el.style.cursor=editable?'':'not-allowed';
+  });
+  const ex=panel.querySelector('.readonly-banner'); if(ex) ex.remove();
+  if(!editable){
+    const b=document.createElement('div'); b.className='readonly-banner';
+    b.style.cssText='background:rgba(0,194,168,.07);border:1px solid rgba(0,194,168,.2);border-radius:8px;padding:9px 16px;font-size:12px;color:var(--accent);margin:0 32px 0 32px;display:flex;align-items:center;gap:8px;';
+    b.innerHTML='🔒 <span>You have <strong>view-only</strong> access to this screen.</span>';
+    const hdr=panel.querySelector('.page-header'); if(hdr) hdr.insertAdjacentElement('afterend',b);
+  }
+}
+
+function show(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('#menu button').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('mbtn_'+id); if(btn) btn.classList.add('active');
+  if(id==='list')       renderTable();
+  if(id==='result')     renderResultTable();
+  if(id==='view')       renderViewTable();
+  if(id==='users')      renderUsersTable();
+  if(id==='accounting') renderAccounting();
+  if(id==='receipts')   renderReceipts();
+  if(id==='export')     previewExportCount();
+  if(currentRole!=='admin') applyReadOnly(id);
+}
+
+let toastTimer;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+(type==='ok'?'ok':'err');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>{el.className='';},3000);
+}
+
+function openModal(html){ document.getElementById('modalBox').innerHTML=html; document.getElementById('modalOverlay').classList.add('show'); }
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+document.getElementById('modalOverlay').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
+
+// ── USER MANAGEMENT ──
+async function createUser(){
+  const u=document.getElementById('newUser').value.trim();
+  const p=document.getElementById('newPass').value;
+  const r=document.getElementById('role').value;
+  if(!u||!p){ toast('Username and password required','err'); return; }
+  const users=dbGet('users');
+  if(users[u]){ toast('Username already exists','err'); return; }
+  users[u]={password:p, role:r, permissions:roleToDefaultPerms(r)};
+  await dbSet('users',users);
+  document.getElementById('newUser').value=''; document.getElementById('newPass').value='';
+  toast(`Account "${u}" created`);
+}
+
+function permLabel(p){
+  if(p==='edit') return `<span class="badge badge-green" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>Edit</span>`;
+  if(p==='view') return `<span class="badge badge-yellow" style="font-size:10px;padding:2px 8px;"><span class="dot"></span>View</span>`;
+  return `<span class="badge" style="font-size:10px;padding:2px 8px;background:rgba(255,255,255,.05);color:var(--text-dim);">None</span>`;
+}
+
+function renderUsersTable(){
+  const users=dbGet('users'); const tbody=document.getElementById('usersTable'); tbody.innerHTML='';
+  Object.keys(users).forEach(u=>{
+    const isAdmin=u==='admin'; const r=users[u].role; const pw=users[u].password;
+    const perms=users[u].permissions||{...DEFAULT_PERMS};
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:13px;">${u}</td>
+      <td><span class="badge ${roleBadge(r)}">${labelRole(r)}</span></td>
+      <td><div style="display:flex;align-items:center;gap:8px;">
+        <span id="pw_${u}" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:2px;">••••••••</span>
+        <button class="btn-ghost" style="padding:4px 9px;font-size:11px;" onclick="togglePw('${u}','${pw}')" id="pweye_${u}">👁</button>
+      </div></td>
+      <td>${isAdmin?'<span style="color:var(--text-dim);font-size:12px;">Full Access</span>'
+        :`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${SCREENS.map(s=>`<span title="${s.label}">${s.icon} ${permLabel(perms[s.id])}</span>`).join('')}
+          <button class="btn-ghost" style="margin-left:4px;" onclick="openPermsModal('${u}')">✏ Edit</button>
+         </div>`}</td>
+      <td><button class="btn-ghost" onclick="openResetPw('${u}')">Reset PW</button></td>
+      <td>${isAdmin?'<span style="color:var(--text-dim);font-size:12px;">Protected</span>'
+        :`<button class="btn-danger" onclick="removeUser('${u}')">Remove</button>`}</td>
+    </tr>`;
+  });
+}
+
+const pwVisible={};
+function togglePw(u,pw){
+  pwVisible[u]=!pwVisible[u];
+  const span=document.getElementById('pw_'+u); const btn=document.getElementById('pweye_'+u);
+  if(pwVisible[u]){ span.textContent=pw; span.style.letterSpacing='.5px'; btn.textContent='🙈'; }
+  else { span.textContent='••••••••'; span.style.letterSpacing='2px'; btn.textContent='👁'; }
+}
+
+function roleBadge(r){ return {admin:'badge-red',entry:'badge-blue',result:'badge-yellow',view:'badge-green'}[r]||'badge-blue'; }
+
+function openPermsModal(u){
+  const users=dbGet('users'); const perms=users[u].permissions||{...DEFAULT_PERMS};
+  const rows=SCREENS.map(s=>`<tr style="border-bottom:1px solid var(--border);">
+    <td style="padding:10px 0;font-size:13px;">${s.icon} ${s.label}</td>
+    <td style="padding:10px 0;"><div style="display:flex;gap:8px;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="radio" name="perm_${s.id}" value="edit" ${perms[s.id]==='edit'?'checked':''}> <span style="color:var(--green);">Edit</span></label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="radio" name="perm_${s.id}" value="view" ${perms[s.id]==='view'?'checked':''}> <span style="color:var(--yellow);">View Only</span></label>
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;"><input type="radio" name="perm_${s.id}" value="none" ${perms[s.id]==='none'?'checked':''}> <span style="color:var(--text-dim);">No Access</span></label>
+    </div></td></tr>`).join('');
+  openModal(`<div class="modal-title">Screen Permissions — <span style="color:var(--accent);font-family:'DM Mono',monospace;">${u}</span></div>
+    <p style="color:var(--text-dim);font-size:12px;margin-bottom:18px;line-height:1.6;">Set per-screen access.</p>
+    <table style="width:100%;border-collapse:collapse;">${rows}</table>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal()">Cancel</button><button class="btn-sm" onclick="savePerms('${u}')">Save Permissions</button></div>`);
+}
+
+async function savePerms(u){
+  const users=dbGet('users'); const newPerms={};
+  SCREENS.forEach(s=>{ const sel=document.querySelector(`input[name="perm_${s.id}"]:checked`); newPerms[s.id]=sel?sel.value:'none'; });
+  users[u].permissions=newPerms; await dbSet('users',users);
+  closeModal(); renderUsersTable(); toast(`Permissions saved for "${u}"`);
+}
+
+function removeUser(u){ if(u==='admin'){ toast('Cannot remove admin','err'); return; }
+  openModal(`<div class="modal-title">Remove User</div><p style="color:var(--text-dim);font-size:14px;line-height:1.6;">Remove <strong>${u}</strong>? This cannot be undone.</p>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal()">Cancel</button><button class="btn-danger" onclick="confirmRemove('${u}')">Remove</button></div>`);
+}
+
+async function confirmRemove(u){
+  const users=dbGet('users'); delete users[u]; await dbSet('users',users);
+  closeModal(); renderUsersTable(); toast(`User "${u}" removed`);
+}
+
+function openResetPw(u){
+  openModal(`<div class="modal-title">Reset Password</div>
+    <p style="color:var(--text-dim);font-size:13px;margin-bottom:18px;">New password for <strong>${u}</strong></p>
+    <div class="field" style="margin-bottom:18px;"><label>New Password</label><input id="resetPwInput" type="password" class="inp" placeholder="Enter new password"></div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal()">Cancel</button><button class="btn-sm" onclick="confirmResetPw('${u}')">Update Password</button></div>`);
+}
+
+async function confirmResetPw(u){
+  const pw=document.getElementById('resetPwInput').value;
+  if(!pw){ toast('Password cannot be empty','err'); return; }
+  const users=dbGet('users'); users[u].password=pw; await dbSet('users',users);
+  closeModal(); toast(`Password reset for "${u}"`);
+}
+
+// ── SAMPLES ──
+async function createSample(){
+  const name=document.getElementById('sampleName').value.trim();
+  const dt=document.getElementById('date').value;
+  const details=document.getElementById('sampleDetails').value.trim();
+  const location=document.getElementById('sampleLocation').value.trim();
+  const payAmount=document.getElementById('payAmount').value.trim();
+  const payMethod=document.getElementById('payMethod').value;
+  const payRef=document.getElementById('payRef').value.trim();
+  if(!name||!dt){ toast('Sample name and date required','err'); return; }
+  const samples=dbGet('samples');
+  const meta=dbGet('meta')||{sampleCounter:0};
+  let counter=parseInt(meta.sampleCounter||0);
+  if(counter>100000) counter=0;
+  counter+=1;
+  meta.sampleCounter=counter;
+  const code='PEMA-'+String(counter).padStart(5,'0');
+  samples[code]={
+    name, date:dt, details, location,
+    status:'Sample Sent to Lab', collectedBy:currentUser,
+    result:'', testedBy:'', resultDate:'',
+    payAmount:payAmount?parseFloat(payAmount):0,
+    payMethod:payMethod||'Not Specified',
+    payRef:payRef||'', payDate:new Date().toLocaleString(),
+  };
+  await Promise.all([dbSet('samples',samples), dbSet('meta',meta)]);
+  ['sampleName','date','sampleDetails','sampleLocation','payAmount','payRef'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('payMethod').value='';
+  toast('Sample registered: '+code);
+}
+
+function dateInRange(dateStr,fromId,toId){
+  const from=document.getElementById(fromId)?.value;
+  const to=document.getElementById(toId)?.value;
+  if(!from&&!to) return true; if(!dateStr) return false;
+  const d=dateStr.substring(0,10);
+  if(from&&d<from) return false; if(to&&d>to) return false;
+  return true;
+}
+function clearDates(fromId,toId,renderFn){ document.getElementById(fromId).value=''; document.getElementById(toId).value=''; window[renderFn](); }
+
+function renderTable(){
+  const samples=dbGet('samples');
+  const allKeys=Object.keys(samples);
+  const keys=allKeys.filter(k=>dateInRange(samples[k].date,'listDateFrom','listDateTo'));
+  const completed=keys.filter(k=>samples[k].status==='Completed').length;
+  const sent=keys.filter(k=>samples[k].status==='Sample Sent to Lab').length;
+  const received=keys.filter(k=>samples[k].status==='Sample Received at Lab').length;
+  const inProcess=keys.filter(k=>samples[k].status==='Under-Process').length;
+  document.getElementById('listStats').innerHTML=`
+    <div class="stat-card"><div class="stat-icon">🧪</div><div><div class="stat-num">${keys.length}</div><div class="stat-label">Total Samples</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🚚</div><div><div class="stat-num">${sent}</div><div class="stat-label">Sent to Lab</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📥</div><div><div class="stat-num">${received}</div><div class="stat-label">Received at Lab</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⚗️</div><div><div class="stat-num">${inProcess}</div><div class="stat-label">Under Process</div></div></div>
+    <div class="stat-card"><div class="stat-icon">✅</div><div><div class="stat-num">${completed}</div><div class="stat-label">Completed</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📊</div><div><div class="stat-num">${keys.length?Math.round(completed/keys.length*100):0}%</div><div class="stat-label">Completion Rate</div></div></div>`;
+  const tbody=document.getElementById('tableBody'); tbody.innerHTML='';
+  keys.forEach(code=>{
+    const s=samples[code];
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;">${code}</td>
+      <td>${s.name}</td><td>${s.date}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.location||'—'}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.collectedBy}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td style="display:flex;gap:8px;align-items:center;">
+        <select id="st_${code}" class="inp">${statusOptions(ALL_STATUSES,s.status)}</select>
+        <button class="btn-sm" onclick="updateStatus('${code}')">Save</button>
+      </td></tr>`;
+  });
+}
+
+async function updateStatus(code){
+  const samples=dbGet('samples');
+  samples[code].status=document.getElementById('st_'+code).value;
+  await dbSet('samples',samples); renderTable(); toast('Status updated');
+}
+
+function renderResultTable(){
+  const samples=dbGet('samples');
+  const filter=document.getElementById('resultFilter').value;
+  const tbody=document.getElementById('resultTable'); tbody.innerHTML=''; let shown=0;
+  Object.keys(samples).forEach(code=>{
+    const s=samples[code];
+    if(filter==='pending'&&s.status==='Completed') return;
+    if(filter==='completed'&&s.status!=='Completed') return;
+    shown++;
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;">${code}</td>
+      <td>${s.name}</td>
+      <td><select id="rs_${code}" class="inp" style="font-size:12px;padding:6px 10px;min-width:190px;">${statusOptions(RESULT_STATUSES,s.status)}</select></td>
+      <td><textarea id="r_${code}" class="inp">${s.result}</textarea></td>
+      <td><button class="btn-sm" onclick="saveResult('${code}')">Save</button></td></tr>`;
+  });
+  if(!shown) tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:28px;">No records found</td></tr>`;
+}
+
+async function saveResult(code){
+  const samples=dbGet('samples');
+  samples[code].status=document.getElementById('rs_'+code).value;
+  samples[code].result=document.getElementById('r_'+code).value;
+  samples[code].testedBy=currentUser;
+  samples[code].resultDate=new Date().toLocaleString();
+  await dbSet('samples',samples); toast('Result & status saved');
+}
+
+function renderViewTable(){
+  const samples=dbGet('samples');
+  const tbody=document.getElementById('viewTable'); tbody.innerHTML='';
+  const keys=Object.keys(samples).filter(k=>dateInRange(samples[k].date,'viewDateFrom','viewDateTo'));
+  if(!keys.length){ tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;">No records for selected date range</td></tr>`; return; }
+  keys.forEach(code=>{
+    const s=samples[code];
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;">${code}</td>
+      <td>${s.name}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.collectedBy||'—'}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.testedBy||'—'}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td><button class="btn-sm" onclick="downloadPDF('${code}')">⬇ PDF</button></td></tr>`;
+  });
+}
+
+function downloadPDF(code){
+  const s=dbGet('samples')[code];
+  const doc=new jsPDF();
+  doc.setFillColor(10,22,40); doc.rect(0,0,210,30,'F');
+  doc.setTextColor(0,194,168); doc.setFontSize(8);
+  doc.text('LABORATORY MANAGEMENT INFORMATION SYSTEM',105,10,null,null,'center');
+  doc.setTextColor(232,237,245); doc.setFontSize(16); doc.setFont(undefined,'bold');
+  doc.text('PASH-PEMA Lab Report',105,20,null,null,'center');
+  doc.setTextColor(50,50,80); doc.setFontSize(10); doc.setFont(undefined,'normal');
+  const row=(label,val,y)=>{ doc.setFont(undefined,'bold'); doc.text(label+': ',20,y); doc.setFont(undefined,'normal'); doc.text(String(val||'—'),70,y); };
+  row('Sample Code',code,50); row('Sample Name',s.name,60); row('Collection Date',s.date,70);
+  row('Collection Location',s.location||'—',80); row('Collected By',s.collectedBy,90);
+  row('Status',s.status,100); row('Tested By',s.testedBy||'Pending',110); row('Result Date',s.resultDate||'Pending',120);
+  doc.setFont(undefined,'bold'); doc.text('Sample Details:',20,135);
+  doc.setFont(undefined,'normal');
+  const detailLines=doc.splitTextToSize(s.details||'—',160); doc.text(detailLines,20,144);
+  const resultY=144+detailLines.length*7+8;
+  doc.setFont(undefined,'bold'); doc.text('Result:',20,resultY);
+  doc.setFont(undefined,'normal');
+  const lines=doc.splitTextToSize(s.result||'No result entered yet.',160); doc.text(lines,20,resultY+10);
+  doc.setFontSize(8); doc.setTextColor(150);
+  doc.text('Generated by PASH-PEMA LMIS — '+new Date().toLocaleString(),105,285,null,null,'center');
+  doc.save('Report_'+code+'.pdf');
+  toast('Report downloaded');
+}
+
+// ── ACCOUNTING ──
+function payMethodBadge(m){
+  const map={'Cash':'badge-green','Cheque':'badge-yellow','Bank Transfer':'badge-blue','QR Code':'badge-purple','UPI':'badge-teal','Others':'badge-gold','Not Specified':''};
+  return `<span class="badge ${map[m]||''}" style="font-size:11px;">${m||'—'}</span>`;
+}
+
+function renderAccounting(){
+  const samples=dbGet('samples');
+  const filter=document.getElementById('acctFilter').value;
+  const allKeys=Object.keys(samples);
+  const keys=allKeys.filter(k=>dateInRange(samples[k].date,'acctDateFrom','acctDateTo'));
+  const totalAmount=keys.reduce((s,k)=>s+(samples[k].payAmount||0),0);
+  const paidCount=keys.filter(k=>(samples[k].payAmount||0)>0).length;
+  const unpaidCount=keys.length-paidCount;
+  const methodTotals={};
+  keys.forEach(k=>{ const m=samples[k].payMethod||'Not Specified'; if(!methodTotals[m]) methodTotals[m]=0; methodTotals[m]+=(samples[k].payAmount||0); });
+  const topMethod=Object.keys(methodTotals).sort((a,b)=>methodTotals[b]-methodTotals[a])[0]||'—';
+  const byCollector={};
+  keys.forEach(k=>{ const c=samples[k].collectedBy||'Unknown'; if(!byCollector[c]) byCollector[c]=0; byCollector[c]+=(samples[k].payAmount||0); });
+  document.getElementById('acctStats').innerHTML=`
+    <div class="stat-card"><div class="stat-icon">💰</div><div><div class="stat-num">₹${totalAmount.toLocaleString('en-IN')}</div><div class="stat-label">Total Collected</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🧾</div><div><div class="stat-num">${keys.length}</div><div class="stat-label">Total Samples</div></div></div>
+    <div class="stat-card"><div class="stat-icon">✅</div><div><div class="stat-num">${paidCount}</div><div class="stat-label">Payments Received</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⚠️</div><div><div class="stat-num">${unpaidCount}</div><div class="stat-label">No Payment Recorded</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📲</div><div><div class="stat-num" style="font-size:14px;">${topMethod}</div><div class="stat-label">Top Payment Method</div></div></div>`;
+  let collRow=document.getElementById('collectorRow');
+  if(!collRow){ collRow=document.createElement('div'); collRow.id='collectorRow'; collRow.style.cssText='display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px;'; document.getElementById('acctStats').insertAdjacentElement('afterend',collRow); }
+  const collHtml=Object.keys(byCollector).map(c=>`<div class="stat-card" style="flex:0 0 auto;"><div class="stat-icon">👤</div><div><div class="stat-num" style="font-size:15px;">₹${byCollector[c].toLocaleString('en-IN')}</div><div class="stat-label">${c}</div></div></div>`).join('');
+  if(Object.keys(byCollector).length) collRow.innerHTML=`<div style="width:100%;font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Collections by Staff</div>${collHtml}`;
+  else collRow.innerHTML='';
+  const tbody=document.getElementById('acctTable'); tbody.innerHTML=''; let shown=0;
+  keys.forEach(code=>{
+    const s=samples[code];
+    if(filter!=='all'&&s.payMethod!==filter) return; shown++;
+    const paid=(s.payAmount||0)>0;
+    const payStatus=paid?`<span class="badge badge-green"><span class="dot"></span>Paid</span>`:`<span class="badge badge-red"><span class="dot"></span>Not Recorded</span>`;
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;">${code}</td><td>${s.name}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.date}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:600;color:var(--green);">₹${(s.payAmount||0).toLocaleString('en-IN')}</td>
+      <td>${payMethodBadge(s.payMethod)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);">${s.payRef||'—'}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.collectedBy||'—'}</td>
+      <td>${payStatus}</td></tr>`;
+  });
+  if(!shown) tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:28px;">No records found</td></tr>`;
+}
+
+function downloadAccountingPDF(){
+  const samples=dbGet('samples'); const keys=Object.keys(samples);
+  const doc=new jsPDF();
+  doc.setFillColor(10,22,40); doc.rect(0,0,210,30,'F');
+  doc.setTextColor(0,194,168); doc.setFontSize(8);
+  doc.text('LABORATORY MANAGEMENT INFORMATION SYSTEM',105,10,null,null,'center');
+  doc.setTextColor(232,237,245); doc.setFontSize(15); doc.setFont(undefined,'bold');
+  doc.text('PASH-PEMA — Accounting Report',105,21,null,null,'center');
+  doc.setTextColor(50,50,80); doc.setFontSize(9); doc.setFont(undefined,'normal');
+  const totalAmount=keys.reduce((s,k)=>(s+(samples[k].payAmount||0)),0);
+  doc.setFont(undefined,'bold');
+  doc.text(`Total Payment Collected: Rs ${totalAmount.toLocaleString('en-IN')}`,20,42);
+  doc.text(`Report Generated: ${new Date().toLocaleString()}`,20,50);
+  doc.setFont(undefined,'normal');
+  let y=62;
+  doc.setFillColor(230,235,245); doc.rect(10,y-6,190,8,'F');
+  doc.setFont(undefined,'bold'); doc.setFontSize(8);
+  doc.text('Code',12,y); doc.text('Name',45,y); doc.text('Date',90,y);
+  doc.text('Amount',120,y); doc.text('Method',145,y); doc.text('Collected By',175,y);
+  doc.setFont(undefined,'normal'); y+=8;
+  keys.forEach(code=>{
+    const s=samples[code];
+    if(y>270){ doc.addPage(); y=20; }
+    doc.text(code,12,y); doc.text((s.name||'').substring(0,20),45,y);
+    doc.text(s.date||'',90,y); doc.text(`Rs ${(s.payAmount||0)}`,120,y);
+    doc.text(s.payMethod||'—',145,y); doc.text((s.collectedBy||'—').substring(0,15),175,y);
+    y+=8; doc.setDrawColor(220,225,235); doc.line(10,y-3,200,y-3);
+  });
+  doc.setFontSize(8); doc.setTextColor(150);
+  doc.text('Generated by PASH-PEMA LMIS — '+new Date().toLocaleString(),105,285,null,null,'center');
+  doc.save('Accounting_Report_'+Date.now()+'.pdf');
+  toast('Accounting report exported');
+}
+
+function roleToDefaultPerms(r){
+  if(r==='entry')  return {sample:'edit',list:'view',result:'none',view:'none',receipts:'none',accounting:'none'};
+  if(r==='result') return {sample:'none',list:'view',result:'edit',view:'view',receipts:'none',accounting:'none'};
+  if(r==='view')   return {sample:'none',list:'view',result:'none',view:'view',receipts:'view',accounting:'none'};
+  return {sample:'none',list:'none',result:'none',view:'none',receipts:'none',accounting:'none'};
+}
+
+// ── PAYMENT RECEIPTS ──
+function renderReceipts(){
+  const samples=dbGet('samples');
+  const query=(document.getElementById('receiptSearch')?.value||'').toLowerCase();
+  const allKeys=Object.keys(samples);
+  const keys=allKeys.filter(k=>dateInRange(samples[k].date,'rcptDateFrom','rcptDateTo'));
+  const totalAmt=keys.reduce((s,k)=>(s+(samples[k].payAmount||0)),0);
+  const paidCount=keys.filter(k=>(samples[k].payAmount||0)>0).length;
+  const unpaid=keys.length-paidCount;
+  const avgAmt=paidCount?Math.round(totalAmt/paidCount):0;
+  document.getElementById('receiptStats').innerHTML=`
+    <div class="stat-card"><div class="stat-icon">💰</div><div><div class="stat-num">&#8377;${totalAmt.toLocaleString('en-IN')}</div><div class="stat-label">Total Collected</div></div></div>
+    <div class="stat-card"><div class="stat-icon">✅</div><div><div class="stat-num">${paidCount}</div><div class="stat-label">Receipts Issued</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⚠️</div><div><div class="stat-num">${unpaid}</div><div class="stat-label">Pending Payment</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📊</div><div><div class="stat-num">&#8377;${avgAmt.toLocaleString('en-IN')}</div><div class="stat-label">Avg. Per Sample</div></div></div>`;
+  const tbody=document.getElementById('receiptsTable'); tbody.innerHTML=''; let shown=0;
+  keys.forEach(code=>{
+    const s=samples[code];
+    if(query&&!code.toLowerCase().includes(query)&&!(s.name||'').toLowerCase().includes(query)) return;
+    shown++;
+    const paid=(s.payAmount||0)>0;
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--accent);">${code}</td>
+      <td>${s.name}</td><td style="color:var(--text-dim);font-size:12px;">${s.date}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:600;color:${paid?'var(--green)':'var(--text-dim)'};">${paid?'Rs '+parseFloat(s.payAmount).toLocaleString('en-IN'):'—'}</td>
+      <td>${paid?payMethodBadge(s.payMethod):'<span style="color:var(--text-dim);font-size:12px;">—</span>'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text-dim);">${s.payRef||'—'}</td>
+      <td style="color:var(--text-dim);font-size:12px;">${s.collectedBy||'—'}</td>
+      <td>${paid?`<button class="btn-sm" onclick="downloadReceiptPDF('${code}')">Receipt PDF</button>`:'<span style="font-size:12px;color:var(--text-dim);">No payment</span>'}</td></tr>`;
+  });
+  if(!shown) tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:28px;">No records found</td></tr>`;
+}
+
+function downloadReceiptPDF(code){
+  const s=dbGet('samples')[code];
+  const doc=new jsPDF({unit:'mm',format:'a5'}); const W=148,H=210;
+  doc.setFillColor(10,22,40); doc.rect(0,0,W,30,'F');
+  doc.setTextColor(0,194,168); doc.setFontSize(7); doc.setFont(undefined,'normal');
+  doc.text('PASH-PEMA LABORATORY MANAGEMENT SYSTEM',W/2,10,null,null,'center');
+  doc.setTextColor(232,237,245); doc.setFontSize(14); doc.setFont(undefined,'bold');
+  doc.text('PAYMENT RECEIPT',W/2,20,null,null,'center');
+  doc.setFontSize(7); doc.setFont(undefined,'normal'); doc.setTextColor(0,194,168);
+  doc.text('Official Receipt — Retain for your records',W/2,27,null,null,'center');
+  doc.setTextColor(40,60,100); doc.setFontSize(8); doc.setFont(undefined,'bold');
+  doc.text('Receipt No: ',10,40); doc.setFont(undefined,'normal'); doc.text(code,34,40);
+  doc.setFont(undefined,'bold'); doc.text('Date: ',95,40); doc.setFont(undefined,'normal'); doc.text(s.payDate||s.date||'—',108,40);
+  doc.setDrawColor(200,215,235); doc.setLineWidth(0.3); doc.line(10,44,W-10,44);
+  doc.setFillColor(244,247,252); doc.roundedRect(10,47,W-20,36,2,2,'F');
+  doc.setTextColor(120,140,170); doc.setFontSize(7); doc.setFont(undefined,'bold'); doc.text('SAMPLE DETAILS',15,54);
+  const lbl=(label,val,x,y)=>{ doc.setFont(undefined,'bold'); doc.setTextColor(130,150,180); doc.setFontSize(6.5); doc.text(label,x,y); doc.setFont(undefined,'normal'); doc.setTextColor(20,40,70); doc.setFontSize(8.5); doc.text(String(val||'—').substring(0,30),x,y+5); };
+  lbl('Sample Code',code,15,59); lbl('Sample / Patient',s.name||'—',65,59);
+  lbl('Collection Date',s.date||'—',15,71); lbl('Location',s.location||'—',65,71);
+  doc.setFillColor(232,252,247); doc.roundedRect(10,88,W-20,44,2,2,'F');
+  doc.setTextColor(0,140,120); doc.setFontSize(7); doc.setFont(undefined,'bold'); doc.text('PAYMENT DETAILS',15,95);
+  lbl('Amount Paid','Rs '+parseFloat(s.payAmount||0).toLocaleString('en-IN'),15,100);
+  lbl('Payment Method',s.payMethod||'—',80,100); lbl('Transaction Ref.',s.payRef||'N/A',15,112);
+  lbl('Collected By',s.collectedBy||'—',80,112);
+  doc.setFillColor(0,194,168); doc.roundedRect(10,136,W-20,16,2,2,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(7); doc.setFont(undefined,'normal');
+  doc.text('TOTAL AMOUNT RECEIVED',W/2,142,null,null,'center');
+  doc.setFontSize(14); doc.setFont(undefined,'bold');
+  doc.text('Rs '+parseFloat(s.payAmount||0).toLocaleString('en-IN'),W/2,150,null,null,'center');
+  doc.setTextColor(80,100,130); doc.setFontSize(8); doc.setFont(undefined,'normal');
+  doc.text('Sample Status: ',10,165); doc.setFont(undefined,'bold'); doc.setTextColor(20,40,70);
+  doc.text(s.status||'—',45,165);
+  doc.setDrawColor(200,215,235); doc.line(10,H-24,W-10,H-24);
+  doc.setTextColor(140,160,190); doc.setFontSize(6.5); doc.setFont(undefined,'normal');
+  doc.text('This is a computer-generated receipt and does not require a signature.',W/2,H-18,null,null,'center');
+  doc.text('PASH-PEMA Laboratory Management System',W/2,H-12,null,null,'center');
+  doc.text('Generated: '+new Date().toLocaleString(),W/2,H-6,null,null,'center');
+  doc.save('Receipt_'+code+'.pdf');
+  toast('Receipt downloaded');
+}
+
+// ── EXPORT TO EXCEL ──
+function getExportRows(fromId,toId){
+  const samples=dbGet('samples');
+  const from=document.getElementById(fromId)?.value||'';
+  const to=document.getElementById(toId)?.value||'';
+  return Object.keys(samples).filter(code=>{
+    const d=(samples[code].date||'').substring(0,10);
+    if(from&&d<from) return false; if(to&&d>to) return false; return true;
+  }).map(code=>{
+    const s=samples[code];
+    return {'Sample Code':code,'Sample Name':s.name||'','Collection Date':s.date||'','Location':s.location||'',
+      'Sample Details':s.details||'','Status':s.status||'','Collected By':s.collectedBy||'',
+      'Tested By':s.testedBy||'','Result Date':s.resultDate||'','Result / Notes':s.result||'',
+      'Amount Paid (Rs)':s.payAmount||0,'Payment Method':s.payMethod||'','Transaction Ref':s.payRef||'','Payment Date':s.payDate||''};
+  });
+}
+
+function previewExportCount(){
+  const rows=getExportRows('exportDateFrom','exportDateTo');
+  const from=document.getElementById('exportDateFrom')?.value;
+  const to=document.getElementById('exportDateTo')?.value;
+  const txt=document.getElementById('exportPreviewText');
+  if(!rows.length){ txt.innerHTML='<span style="color:var(--red);">No records found for the selected date range.</span>'; }
+  else {
+    const rangeNote=(from||to)?` between <strong style="color:var(--text);">${from||'start'}</strong> and <strong style="color:var(--text);">${to||'today'}</strong>`:'';
+    txt.innerHTML=`Ready to export <strong style="color:var(--accent);">${rows.length} record${rows.length!==1?'s':''}</strong>${rangeNote}. Each row contains 14 fields.`;
+  }
+  const title=document.getElementById('exportTableTitle');
+  if(title) title.textContent=`Preview — ${rows.length} record${rows.length!==1?'s':''} to be exported`;
+  const tbody=document.getElementById('exportPreviewTable'); if(!tbody) return;
+  tbody.innerHTML='';
+  if(!rows.length){ tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:24px;">No records match the selected date range.</td></tr>`; return; }
+  const samples=dbGet('samples'); const allCodes=Object.keys(samples);
+  const from2=document.getElementById('exportDateFrom')?.value||'';
+  const to2=document.getElementById('exportDateTo')?.value||'';
+  let shown=0;
+  allCodes.forEach(code=>{
+    if(shown>=50) return;
+    const d=(samples[code].date||'').substring(0,10);
+    if(from2&&d<from2) return; if(to2&&d>to2) return;
+    const s=samples[code]; shown++;
+    tbody.innerHTML+=`<tr>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);">${code}</td>
+      <td>${s.name||'—'}</td>
+      <td style="color:var(--text-dim);font-size:11px;">${s.date||'—'}</td>
+      <td style="color:var(--text-dim);font-size:11px;">${(s.location||'—').substring(0,20)}</td>
+      <td>${statusBadge(s.status)}</td>
+      <td style="color:var(--text-dim);font-size:11px;">${s.collectedBy||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--green);">${(s.payAmount||0)>0?'Rs '+(s.payAmount||0):'—'}</td>
+      <td>${(s.payAmount||0)>0?payMethodBadge(s.payMethod):'<span style="color:var(--text-dim);font-size:11px;">—</span>'}</td></tr>`;
+  });
+  if(rows.length>50) tbody.innerHTML+=`<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:12px;font-size:12px;">…and ${rows.length-50} more rows (all will be included in the Excel file)</td></tr>`;
+}
+
+function exportToExcel(){
+  const rows=getExportRows('exportDateFrom','exportDateTo');
+  if(!rows.length){ toast('No records to export','err'); return; }
+  const from=document.getElementById('exportDateFrom')?.value||'';
+  const to=document.getElementById('exportDateTo')?.value||'';
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:14},{wch:22},{wch:14},{wch:24},{wch:30},{wch:22},{wch:16},{wch:16},{wch:20},{wch:40},{wch:14},{wch:16},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Sample Records');
+  const totalAmt=rows.reduce((s,r)=>s+(r['Amount Paid (Rs)']||0),0);
+  const paidRows=rows.filter(r=>(r['Amount Paid (Rs)']||0)>0);
+  const statusCount={},methodCount={};
+  rows.forEach(r=>{ statusCount[r['Status']]=(statusCount[r['Status']]||0)+1; if(r['Amount Paid (Rs)']>0) methodCount[r['Payment Method']]=(methodCount[r['Payment Method']]||0)+1; });
+  const summaryData=[['PASH-PEMA LMIS — Export Summary'],[''],['Generated',new Date().toLocaleString()],['Date Range',(from||'All')+' to '+(to||'All')],['Total Records',rows.length],[''],['— SAMPLE STATUS BREAKDOWN —'],...Object.keys(statusCount).map(k=>[k,statusCount[k]]),[''],['— PAYMENT SUMMARY —'],['Total Collected (Rs)',totalAmt],['Samples with Payment',paidRows.length],['Samples without Payment',rows.length-paidRows.length],[''],['— PAYMENT METHOD BREAKDOWN —'],...Object.keys(methodCount).map(k=>[k,methodCount[k]])];
+  const ws2=XLSX.utils.aoa_to_sheet(summaryData); ws2['!cols']=[{wch:30},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+  const datePart=(from||to)?`_${from||'start'}_to_${to||'end'}`:'_all';
+  XLSX.writeFile(wb,`PEMA_Export${datePart}_${new Date().toISOString().substring(0,10)}.xlsx`);
+  toast(`Exported ${rows.length} records to Excel`);
+}
+
+// ── BOOT ──
+(function(){
+  if(loadConfig()){
+    document.getElementById('configScreen').style.display='none';
+    initDB();
+  }
+})();
+</script>
+</body>
+</html>
