@@ -1559,24 +1559,11 @@ function exportToExcel(){
 
 // ── BOOT ── (hardcoded config — no setup screen needed)
 (function(){
+  GH.owner = 'harrysmith1812';
   GH.repo  = 'pash-pema-db';
-  GH.token = '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';
-  // Auto-detect owner from token, then init
-  fetch('https://api.github.com/user', {
-    headers: { 'Authorization': 'token ' + GH.token, 'Accept': 'application/vnd.github.v3+json' }
-  })
-  .then(r => r.json())
-  .then(d => {
-    GH.owner = d.login;
-    document.getElementById('configScreen').style.display = 'none';
-    initDB();
-  })
-  .catch(() => {
-    // Fallback: try without owner detection (owner will fail gracefully in initDB)
-    GH.owner = '';
-    document.getElementById('configScreen').style.display = 'none';
-    initDB();
-  });
+  GH.token = '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';
+  document.getElementById('configScreen').style.display = 'none';
+  initDB();
 })();
 </script>
 </body>
