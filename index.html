@@ -739,15 +739,15 @@
 const { jsPDF } = window.jspdf;
 
 // ══════════════════════════════════════════════════════
-//  JSONBIN.IO DATABASE LAYER
+//  JSONBIN.IO DATABASE LAYER — single bin for all data
 // ══════════════════════════════════════════════════════
 
 const JB = {
   masterKey: '$2a$10$jLdaepIatvfsfacSa7OAteF1lWoLSXpfMCo.BaQmVKgStoUbjD55q',
   accessKey: '$2a$10$UwOQBVeMxbztvTuJvcDt8OQ7QSNSRJ0XI.dpwSGOasf3YYs0ZtbtK',
-  binIds: { users: null, samples: null, meta: null },
+  binId: null,
 
-  headers(write=false) {
+  headers() {
     return {
       'Content-Type': 'application/json',
       'X-Master-Key': this.masterKey,
@@ -756,43 +756,36 @@ const JB = {
     };
   },
 
-  async createBin(name, data) {
+  async createBin(data) {
     const r = await fetch('https://api.jsonbin.io/v3/b', {
       method: 'POST',
-      headers: { ...this.headers(), 'X-Bin-Name': name, 'X-Bin-Private': 'true' },
+      headers: { ...this.headers(), 'X-Bin-Name': 'pema_lmis_db', 'X-Bin-Private': 'true' },
       body: JSON.stringify(data),
     });
-    if (!r.ok) throw new Error(`JSONBin create ${name}: ${r.status}`);
+    if (!r.ok) { const t = await r.text(); throw new Error(`JSONBin create: ${r.status} — ${t}`); }
     const d = await r.json();
     return d.metadata.id;
   },
 
-  async readBin(id) {
-    const r = await fetch(`https://api.jsonbin.io/v3/b/${id}/latest`, { headers: this.headers() });
-    if (!r.ok) throw new Error(`JSONBin read ${id}: ${r.status}`);
+  async readBin() {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}/latest`, { headers: this.headers() });
+    if (!r.ok) throw new Error(`JSONBin read: ${r.status}`);
     const d = await r.json();
     return d.record;
   },
 
-  async writeBin(id, data) {
-    const r = await fetch(`https://api.jsonbin.io/v3/b/${id}`, {
+  async writeBin(data) {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}`, {
       method: 'PUT',
       headers: this.headers(),
       body: JSON.stringify(data),
     });
-    if (!r.ok) throw new Error(`JSONBin write ${id}: ${r.status}`);
+    if (!r.ok) throw new Error(`JSONBin write: ${r.status}`);
     return true;
   },
-
-  async listBins() {
-    const r = await fetch('https://api.jsonbin.io/v3/c/meta', { headers: this.headers() });
-    if (!r.ok) return [];
-    const d = await r.json();
-    return d.result || [];
-  }
 };
 
-// In-memory cache
+// In-memory cache — single object with users, samples, meta
 let dbCache = { users: null, samples: null, meta: null };
 let syncQueue = {};
 let syncTimer = null;
@@ -801,44 +794,39 @@ let syncTimer = null;
 async function initDB() {
   showLoading('Connecting to database…');
   try {
-    // Find existing bins by listing all bins
-    const bins = await JB.listBins();
-    const find = (name) => bins.find(b => b.name === 'pema_' + name);
+    // Check localStorage for saved bin ID
+    const savedId = localStorage.getItem('jb_binId');
+    if (savedId) JB.binId = savedId;
 
-    for (const key of ['users', 'samples', 'meta']) {
-      const existing = find(key);
-      if (existing) {
-        JB.binIds[key] = existing.id;
+    if (JB.binId) {
+      // Try to read existing bin
+      showLoading('Loading data…');
+      try {
+        const data = await JB.readBin();
+        dbCache.users   = data.users   || { admin: { password:'admin123', role:'admin' } };
+        dbCache.samples = data.samples || {};
+        dbCache.meta    = data.meta    || { sampleCounter: 0 };
+      } catch(e) {
+        // Bin ID invalid, create fresh
+        JB.binId = null;
+        localStorage.removeItem('jb_binId');
       }
     }
 
-    // Create any missing bins with defaults
-    if (!JB.binIds.users) {
-      showLoading('Creating users database…');
-      JB.binIds.users = await JB.createBin('pema_users', { admin: { password:'admin123', role:'admin' } });
+    if (!JB.binId) {
+      // Create a brand new single bin with all default data
+      showLoading('Setting up database for first time…');
+      const defaultData = {
+        users:   { admin: { password:'admin123', role:'admin' } },
+        samples: {},
+        meta:    { sampleCounter: 0 },
+      };
+      JB.binId = await JB.createBin(defaultData);
+      localStorage.setItem('jb_binId', JB.binId);
+      dbCache.users   = defaultData.users;
+      dbCache.samples = defaultData.samples;
+      dbCache.meta    = defaultData.meta;
     }
-    if (!JB.binIds.samples) {
-      showLoading('Creating samples database…');
-      JB.binIds.samples = await JB.createBin('pema_samples', {});
-    }
-    if (!JB.binIds.meta) {
-      showLoading('Creating metadata…');
-      JB.binIds.meta = await JB.createBin('pema_meta', { sampleCounter: 0 });
-    }
-
-    // Save bin IDs to localStorage so we don't re-discover every time
-    localStorage.setItem('jb_binIds', JSON.stringify(JB.binIds));
-
-    // Load all data
-    showLoading('Loading data…');
-    const [u, s, m] = await Promise.all([
-      JB.readBin(JB.binIds.users),
-      JB.readBin(JB.binIds.samples),
-      JB.readBin(JB.binIds.meta),
-    ]);
-    dbCache.users   = u;
-    dbCache.samples = s;
-    dbCache.meta    = m;
 
     hideLoading();
     setSyncStatus('ok', 'Synced');
@@ -877,34 +865,26 @@ async function flushSave() {
   if (!keys.length) return;
   setSyncStatus('syncing', 'Syncing…');
   document.getElementById('syncBar').className = 'syncing';
-  const toWrite = { ...syncQueue };
   syncQueue = {};
   try {
-    for (const key of keys) {
-      await JB.writeBin(JB.binIds[key], toWrite[key]);
-    }
+    // Write entire DB as one object
+    await JB.writeBin({ users: dbCache.users, samples: dbCache.samples, meta: dbCache.meta });
     setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString());
     document.getElementById('syncBar').className = '';
   } catch(e) {
     setSyncStatus('err', 'Save failed');
     document.getElementById('syncBar').className = 'error';
     toast('Sync error: ' + e.message, 'err');
-    // Re-queue failed writes
-    Object.assign(syncQueue, toWrite);
   }
 }
 
 async function refreshFromDB() {
   if (Object.keys(syncQueue).length > 0) return;
   try {
-    const [u, s, m] = await Promise.all([
-      JB.readBin(JB.binIds.users),
-      JB.readBin(JB.binIds.samples),
-      JB.readBin(JB.binIds.meta),
-    ]);
-    dbCache.users   = u;
-    dbCache.samples = s;
-    dbCache.meta    = m;
+    const data = await JB.readBin();
+    dbCache.users   = data.users   || dbCache.users;
+    dbCache.samples = data.samples || dbCache.samples;
+    dbCache.meta    = data.meta    || dbCache.meta;
     setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString());
   } catch(e) {
     setSyncStatus('err', 'Refresh failed');
@@ -1548,11 +1528,6 @@ function exportToExcel(){
 // ── BOOT ──
 (function(){
   document.getElementById('configScreen').style.display = 'none';
-  // Restore cached bin IDs if available (speeds up init)
-  const cached = localStorage.getItem('jb_binIds');
-  if (cached) {
-    try { Object.assign(JB.binIds, JSON.parse(cached)); } catch(e) {}
-  }
   initDB();
 })();
 </script>
