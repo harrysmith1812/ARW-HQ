@@ -739,114 +739,106 @@
 const { jsPDF } = window.jspdf;
 
 // ══════════════════════════════════════════════════════
-//  GITHUB DATABASE LAYER
+//  JSONBIN.IO DATABASE LAYER
 // ══════════════════════════════════════════════════════
 
-const GH = {
-  owner: '', repo: '', token: '',
-  baseUrl() { return `https://api.github.com/repos/${this.owner}/${this.repo}/contents/`; },
+const JB = {
+  masterKey: '$2a$10$jLdaepIatvfsfacSa7OAteF1lWoLSXpfMCo.BaQmVKgStoUbjD55q',
+  accessKey: '$2a$10$UwOQBVeMxbztvTuJvcDt8OQ7QSNSRJ0XI.dpwSGOasf3YYs0ZtbtK',
+  binIds: { users: null, samples: null, meta: null },
 
-  headers() {
+  headers(write=false) {
     return {
-      'Authorization': `token ${this.token}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github.v3+json',
+      'X-Master-Key': this.masterKey,
+      'X-Access-Key': this.accessKey,
+      'X-Bin-Versioning': 'false',
     };
   },
 
-  async getFile(path) {
-    const r = await fetch(this.baseUrl() + path, { headers: this.headers() });
-    if (r.status === 404) return null;
-    if (!r.ok) throw new Error(`GitHub GET ${path}: ${r.status}`);
-    const d = await r.json();
-    return { content: JSON.parse(atob(d.content.replace(/\n/g,''))), sha: d.sha };
-  },
-
-  async putFile(path, content, sha) {
-    const body = {
-      message: `update ${path} ${new Date().toISOString()}`,
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(content, null, 2)))),
-    };
-    if (sha) body.sha = sha;
-    const r = await fetch(this.baseUrl() + path, {
-      method: 'PUT', headers: this.headers(), body: JSON.stringify(body),
+  async createBin(name, data) {
+    const r = await fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: { ...this.headers(), 'X-Bin-Name': name, 'X-Bin-Private': 'true' },
+      body: JSON.stringify(data),
     });
-    if (!r.ok) {
-      const err = await r.json().catch(()=>({}));
-      throw new Error(err.message || `GitHub PUT ${path}: ${r.status}`);
-    }
+    if (!r.ok) throw new Error(`JSONBin create ${name}: ${r.status}`);
     const d = await r.json();
-    return d.content.sha;
+    return d.metadata.id;
   },
 
-  async testConnection() {
-    const r = await fetch(`https://api.github.com/repos/${this.owner}/${this.repo}`, { headers: this.headers() });
-    return r.ok;
+  async readBin(id) {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${id}/latest`, { headers: this.headers() });
+    if (!r.ok) throw new Error(`JSONBin read ${id}: ${r.status}`);
+    const d = await r.json();
+    return d.record;
+  },
+
+  async writeBin(id, data) {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${id}`, {
+      method: 'PUT',
+      headers: this.headers(),
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error(`JSONBin write ${id}: ${r.status}`);
+    return true;
+  },
+
+  async listBins() {
+    const r = await fetch('https://api.jsonbin.io/v3/c/meta', { headers: this.headers() });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d.result || [];
   }
 };
 
-// In-memory cache + sha tracking
+// In-memory cache
 let dbCache = { users: null, samples: null, meta: null };
-let dbSha   = { users: null, samples: null, meta: null };
-let syncQueue = {};  // pending writes
+let syncQueue = {};
 let syncTimer = null;
-
-// ── CONFIG ──
-function loadConfig() {
-  const cfg = localStorage.getItem('gh_config');
-  if (!cfg) return false;
-  const { owner, repo, token } = JSON.parse(cfg);
-  if (!owner || !repo || !token) return false;
-  GH.owner = owner; GH.repo = repo; GH.token = token;
-  return true;
-}
-
-async function saveConfig() {
-  const owner = document.getElementById('cfgOwner').value.trim();
-  const repo  = document.getElementById('cfgRepo').value.trim();
-  const token = document.getElementById('cfgToken').value.trim();
-  const errEl = document.getElementById('cfgError');
-  errEl.textContent = '';
-  if (!owner || !repo || !token) { errEl.textContent = 'All fields are required.'; return; }
-  GH.owner = owner; GH.repo = repo; GH.token = token;
-  showLoading('Testing connection…');
-  const ok = await GH.testConnection().catch(()=>false);
-  if (!ok) {
-    hideLoading();
-    errEl.textContent = 'Could not connect. Check username, repo name, and token.';
-    return;
-  }
-  localStorage.setItem('gh_config', JSON.stringify({ owner, repo, token }));
-  document.getElementById('configScreen').style.display = 'none';
-  await initDB();
-}
 
 // ── INIT DB ──
 async function initDB() {
-  showLoading('Loading data from GitHub…');
+  showLoading('Connecting to database…');
   try {
-    const [u, s, m] = await Promise.all([
-      GH.getFile('users.json'),
-      GH.getFile('samples.json'),
-      GH.getFile('meta.json'),
-    ]);
+    // Find existing bins by listing all bins
+    const bins = await JB.listBins();
+    const find = (name) => bins.find(b => b.name === 'pema_' + name);
 
-    if (!u) {
-      // First time: create default data
-      const defaultUsers = { admin: { password:'admin123', role:'admin' } };
-      const defaultSamples = {};
-      const defaultMeta = { sampleCounter: 0 };
-      dbSha.users   = await GH.putFile('users.json',   defaultUsers,   null);
-      dbSha.samples = await GH.putFile('samples.json', defaultSamples, null);
-      dbSha.meta    = await GH.putFile('meta.json',    defaultMeta,    null);
-      dbCache.users   = defaultUsers;
-      dbCache.samples = defaultSamples;
-      dbCache.meta    = defaultMeta;
-    } else {
-      dbCache.users   = u.content;   dbSha.users   = u.sha;
-      dbCache.samples = s ? s.content : {};  dbSha.samples = s ? s.sha : null;
-      dbCache.meta    = m ? m.content : { sampleCounter:0 }; dbSha.meta = m ? m.sha : null;
+    for (const key of ['users', 'samples', 'meta']) {
+      const existing = find(key);
+      if (existing) {
+        JB.binIds[key] = existing.id;
+      }
     }
+
+    // Create any missing bins with defaults
+    if (!JB.binIds.users) {
+      showLoading('Creating users database…');
+      JB.binIds.users = await JB.createBin('pema_users', { admin: { password:'admin123', role:'admin' } });
+    }
+    if (!JB.binIds.samples) {
+      showLoading('Creating samples database…');
+      JB.binIds.samples = await JB.createBin('pema_samples', {});
+    }
+    if (!JB.binIds.meta) {
+      showLoading('Creating metadata…');
+      JB.binIds.meta = await JB.createBin('pema_meta', { sampleCounter: 0 });
+    }
+
+    // Save bin IDs to localStorage so we don't re-discover every time
+    localStorage.setItem('jb_binIds', JSON.stringify(JB.binIds));
+
+    // Load all data
+    showLoading('Loading data…');
+    const [u, s, m] = await Promise.all([
+      JB.readBin(JB.binIds.users),
+      JB.readBin(JB.binIds.samples),
+      JB.readBin(JB.binIds.meta),
+    ]);
+    dbCache.users   = u;
+    dbCache.samples = s;
+    dbCache.meta    = m;
 
     hideLoading();
     setSyncStatus('ok', 'Synced');
@@ -854,17 +846,16 @@ async function initDB() {
     document.getElementById('syncStatus').style.display = 'flex';
 
     // Auto-refresh every 30s
-    setInterval(refreshFromGitHub, 30000);
+    setInterval(refreshFromDB, 30000);
 
   } catch(e) {
     hideLoading();
     setSyncStatus('err', 'Sync error');
-    alert('Error connecting to GitHub database:\n' + e.message + '\n\nPlease check your config.');
-    document.getElementById('configScreen').style.display = 'flex';
+    alert('Error connecting to database:\n' + e.message);
   }
 }
 
-// ── READ / WRITE helpers (replace localStorage) ──
+// ── READ / WRITE helpers ──
 function dbGet(key) {
   return dbCache[key] || (key === 'samples' ? {} : key === 'users' ? {} : {});
 }
@@ -890,42 +881,39 @@ async function flushSave() {
   syncQueue = {};
   try {
     for (const key of keys) {
-      dbSha[key] = await GH.putFile(key + '.json', toWrite[key], dbSha[key]);
+      await JB.writeBin(JB.binIds[key], toWrite[key]);
     }
     setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString());
     document.getElementById('syncBar').className = '';
   } catch(e) {
-    // Conflict (someone else saved): refresh and retry
-    if (e.message && e.message.includes('409')) {
-      await refreshFromGitHub();
-      toast('Conflict resolved — retrying save', 'ok');
-      // Re-queue
-      Object.assign(syncQueue, toWrite);
-      scheduleSave();
-    } else {
-      setSyncStatus('err', 'Save failed');
-      document.getElementById('syncBar').className = 'error';
-      toast('Sync error: ' + e.message, 'err');
-    }
+    setSyncStatus('err', 'Save failed');
+    document.getElementById('syncBar').className = 'error';
+    toast('Sync error: ' + e.message, 'err');
+    // Re-queue failed writes
+    Object.assign(syncQueue, toWrite);
   }
 }
 
-async function refreshFromGitHub() {
-  if (Object.keys(syncQueue).length > 0) return; // don't refresh mid-save
+async function refreshFromDB() {
+  if (Object.keys(syncQueue).length > 0) return;
   try {
     const [u, s, m] = await Promise.all([
-      GH.getFile('users.json'),
-      GH.getFile('samples.json'),
-      GH.getFile('meta.json'),
+      JB.readBin(JB.binIds.users),
+      JB.readBin(JB.binIds.samples),
+      JB.readBin(JB.binIds.meta),
     ]);
-    if (u) { dbCache.users = u.content; dbSha.users = u.sha; }
-    if (s) { dbCache.samples = s.content; dbSha.samples = s.sha; }
-    if (m) { dbCache.meta = m.content; dbSha.meta = m.sha; }
+    dbCache.users   = u;
+    dbCache.samples = s;
+    dbCache.meta    = m;
     setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString());
   } catch(e) {
     setSyncStatus('err', 'Refresh failed');
   }
 }
+
+// dummy stubs no longer needed but kept to avoid reference errors
+function loadConfig() { return true; }
+async function saveConfig() {}
 
 function setSyncStatus(type, msg) {
   const dot  = document.getElementById('syncDot');
@@ -1557,12 +1545,14 @@ function exportToExcel(){
   toast(`Exported ${rows.length} records to Excel`);
 }
 
-// ── BOOT ── (hardcoded config — no setup screen needed)
+// ── BOOT ──
 (function(){
-  GH.owner = 'harrysmith1812';
-  GH.repo  = 'pash-pema-db';
-  GH.token = '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';
   document.getElementById('configScreen').style.display = 'none';
+  // Restore cached bin IDs if available (speeds up init)
+  const cached = localStorage.getItem('jb_binIds');
+  if (cached) {
+    try { Object.assign(JB.binIds, JSON.parse(cached)); } catch(e) {}
+  }
   initDB();
 })();
 </script>
