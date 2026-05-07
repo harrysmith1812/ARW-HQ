@@ -1890,22 +1890,16 @@
 <script>
 
 // ── JSONBIN.IO CREDENTIALS ──
+// All 3 bins use the master key — simplest and most reliable
+const MASTER_KEY = '$2a$10$jLdaepIatvfsfacSa7OAteF1lWoLSXpfMCo.BaQmVKgStoUbjD55q';
+
 const JSONBIN = {
   // Bin 1: users, customers, counters
-  core: {
-    id:  '69f3583536566621a80cd1cd',
-    key: '$2a$10$jLdaepIatvfsfacSa7OAteF1lWoLSXpfMCo.BaQmVKgStoUbjD55q'  // master key
-  },
+  core:    { id: '69f3583536566621a80cd1cd', key: MASTER_KEY },
   // Bin 2: samples
-  samples: {
-    id:  '69f32f3e856a6821898dc0c8',
-    key: '$2a$10$UwOQBVeMxbztvTuJvcDt8OQ7QSNSRJ0XI.dpwSGOasf3YYs0ZtbtK'  // PEMA-LIVE
-  },
+  samples: { id: '69f32f3e856a6821898dc0c8', key: MASTER_KEY },
   // Bin 3: helpQueries
-  help: {
-    id:  '69f32decaaba88219755c419',
-    key: '$2a$10$/u9Y253Tb6trRJBoaYFisOuW3HTcR6ltaxevSGTuhuyAe.pICEf36'   // PEMA-LMIS
-  }
+  help:    { id: '69f32decaaba88219755c419', key: MASTER_KEY }
 };
 
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
@@ -1928,11 +1922,20 @@ const dbQueue = { core: Promise.resolve(), samples: Promise.resolve(), help: Pro
 // ── READ a bin ──
 async function binGet(bin) {
   const r = await fetch(`${JSONBIN_BASE}/${JSONBIN[bin].id}/latest`, {
-    headers: { 'X-Master-Key': JSONBIN[bin].key }
+    method: 'GET',
+    headers: {
+      'X-Master-Key': JSONBIN[bin].key,
+      'X-Bin-Meta':   'false'          // return only record, no metadata wrapper
+    }
   });
-  if (!r.ok) throw new Error(`binGet(${bin}) failed: ${r.status}`);
+  if (!r.ok) {
+    const txt = await r.text().catch(()=>'');
+    throw new Error(`binGet(${bin}) HTTP ${r.status}: ${txt}`);
+  }
   const j = await r.json();
-  return j.record;           // JSONBin wraps the data in { record: {...} }
+  // With X-Bin-Meta:false the response IS the record directly
+  // Without it, it's wrapped in { record: {...}, metadata: {...} }
+  return j.record !== undefined ? j.record : j;
 }
 
 // ── WRITE a bin ──
@@ -1941,11 +1944,15 @@ async function binPut(bin, data) {
     method:  'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'X-Master-Key': JSONBIN[bin].key
+      'X-Master-Key': JSONBIN[bin].key,
+      'X-Bin-Versioning': 'false'      // keep bin lean — no version history
     },
     body: JSON.stringify(data)
   });
-  if (!r.ok) throw new Error(`binPut(${bin}) failed: ${r.status}`);
+  if (!r.ok) {
+    const txt = await r.text().catch(()=>'');
+    throw new Error(`binPut(${bin}) HTTP ${r.status}: ${txt}`);
+  }
 }
 
 // ── LOAD all three bins in parallel ──
@@ -1964,7 +1971,11 @@ async function loadDB() {
     DB.helpQueries     = helpData.helpQueries || [];
   } catch (err) {
     console.error('loadDB error:', err);
-    toast('⚠️ Could not load database. Check your connection.', 'err');
+    // Show specific error in loader so it's debuggable
+    const msg = document.getElementById('dbLoaderMsg');
+    if (msg) msg.textContent = '⚠️ DB Error: ' + err.message;
+    // Also show toast once app shell is visible
+    setTimeout(() => toast('⚠️ DB load failed: ' + err.message, 'err'), 500);
   }
   // Ensure admin always exists
   if (!DB.users.admin || DB.users.admin.role !== 'admin') {
