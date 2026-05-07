@@ -3409,7 +3409,12 @@ function renderResultTable(){
   if(!shown) tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;">No records found</td></tr>`;
 }
 
-function handleDetailedReportUpload(event, code){
+// ── CLOUDINARY CONFIG ──
+const CLOUDINARY_CLOUD  = 'dnaqcwgxv';
+const CLOUDINARY_PRESET = 'pash-pema-pdfs';
+const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/raw/upload`;
+
+async function handleDetailedReportUpload(event, code){
   const file = event.target.files[0];
   if(!file) return;
   if(file.type !== 'application/pdf'){
@@ -3417,34 +3422,59 @@ function handleDetailedReportUpload(event, code){
     event.target.value='';
     return;
   }
-  if(file.size > 5 * 1024 * 1024){
-    toast('PDF file must be under 5MB','err');
+  if(file.size > 20 * 1024 * 1024){
+    toast('PDF file must be under 20MB','err');
     event.target.value='';
     return;
   }
-  const reader = new FileReader();
-  reader.onload = function(e){
+
+  toast('Uploading PDF…');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_PRESET);
+    // Use sample code as the public_id so each sample has one canonical PDF
+    formData.append('public_id', 'reports/' + code);
+
+    const res = await fetch(CLOUDINARY_UPLOAD_URL, {
+      method: 'POST',
+      body: formData
+    });
+
+    if(!res.ok){
+      const err = await res.json().catch(()=>({}));
+      throw new Error(err.error?.message || 'Upload failed (HTTP ' + res.status + ')');
+    }
+
+    const data = await res.json();
+    const pdfUrl = data.secure_url;
+
     const samples = JSON.parse(dbGet('samples')||'{}');
     if(!samples[code]) return;
-    samples[code].detailedReport     = e.target.result; // base64 data URL
+    samples[code].detailedReport     = pdfUrl;       // Cloudinary HTTPS URL
     samples[code].detailedReportName = file.name;
     dbSet('samples', JSON.stringify(samples));
-    toast('Detailed report uploaded: '+file.name);
+
+    toast('✓ PDF uploaded: ' + file.name);
     renderResultTable();
-    // Refresh reports table if visible
     const viewPanel = document.getElementById('view');
     if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
-  };
-  reader.readAsDataURL(file);
+
+  } catch(err) {
+    console.error('Cloudinary upload error:', err);
+    toast('Upload failed: ' + err.message, 'err');
+  }
+
+  event.target.value = '';
 }
 
 function viewDetailedReport(code){
   const samples = JSON.parse(dbGet('samples')||'{}');
   const s = samples[code];
   if(!s || !s.detailedReport){ toast('No detailed report found','err'); return; }
-  const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>${escHtml(s.detailedReportName||code)}</title></head>
-    <body style="margin:0;"><embed src="${s.detailedReport}" width="100%" height="100%" type="application/pdf"/></body></html>`);
+  // Open the Cloudinary-hosted PDF directly in a new tab
+  window.open(s.detailedReport, '_blank');
 }
 
 function removeDetailedReport(code){
