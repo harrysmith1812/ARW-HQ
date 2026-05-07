@@ -1890,16 +1890,16 @@
 <script>
 
 // ── JSONBIN.IO CREDENTIALS ──
-// All 3 bins use the master key — simplest and most reliable
-const MASTER_KEY = '$2a$10$jLdaepIatvfsfacSa7OAteF1lWoLSXpfMCo.BaQmVKgStoUbjD55q';
+const MASTER_KEY  = '$2a$10$9dBgaLBq0Hb5Ir.YZFy2j.cYKaM2k2F9.IvC8yzaQNZYRZa4DJF8W';
+const ACCESS_KEY  = '$2a$10$D0pdF534eQRYCzG1jEVDoeV1Ps7sTDRPbzjBftf.seGR6GdtV71o.';
 
 const JSONBIN = {
-  // Bin 1: users, customers, counters
-  core:    { id: '69f3583536566621a80cd1cd', key: MASTER_KEY },
-  // Bin 2: samples
-  samples: { id: '69f32f3e856a6821898dc0c8', key: MASTER_KEY },
-  // Bin 3: helpQueries
-  help:    { id: '69f32decaaba88219755c419', key: MASTER_KEY }
+  // Bin: users, customers, counters
+  core:    { id: '69fc0d7b250b1311c3157bee', key: MASTER_KEY },
+  // Bin: samples
+  samples: { id: '69fc0da0adc21f119a653426', key: MASTER_KEY },
+  // Bin: helpQueries
+  help:    { id: '69fc0dbc250b1311c3157d20', key: MASTER_KEY }
 };
 
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
