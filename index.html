@@ -6,6 +6,7 @@
 <title>PASH-PEMA LMIS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
@@ -2077,6 +2078,141 @@ function dbSet(key, value) {
 
 const { jsPDF } = window.jspdf;
 
+// ── QR CODE HELPER ──
+// Returns a Promise<base64 PNG dataURL> for any text
+function generateQRDataURL(text) {
+  return new Promise((resolve) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;left:-9999px;top:-9999px;';
+    document.body.appendChild(div);
+    const qr = new QRCode(div, {
+      text: text,
+      width: 256,
+      height: 256,
+      colorDark: '#0a1628',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    // QRCode renders async via image
+    setTimeout(() => {
+      const img = div.querySelector('img') || div.querySelector('canvas');
+      let dataUrl = '';
+      if (img && img.tagName === 'IMG') {
+        dataUrl = img.src;
+      } else if (img && img.tagName === 'CANVAS') {
+        dataUrl = img.toDataURL('image/png');
+      }
+      document.body.removeChild(div);
+      resolve(dataUrl);
+    }, 200);
+  });
+}
+
+// Build the public verification URL for a sample code
+function verifyURL(code) {
+  const base = window.location.origin + window.location.pathname;
+  return base + '?view=' + encodeURIComponent(code);
+}
+
+// ── PUBLIC VERIFICATION VIEW ──
+// If URL has ?view=CODE, show a public read-only panel (no login needed)
+(function checkVerifyMode() {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('view');
+  if (!code) return;
+
+  // Hide normal app, show verify panel instead
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.style.background = '#0a1628';
+    document.body.innerHTML = `
+      <div id="verifyWrap" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:#0a1628;font-family:'DM Sans',sans-serif;">
+        <div style="width:100%;max-width:520px;">
+          <div style="text-align:center;margin-bottom:28px;">
+            <div style="font-size:12px;letter-spacing:3px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:8px;">PASH-PEMA LMIS</div>
+            <div style="font-size:22px;font-weight:700;color:#e8edf5;">Document Verification</div>
+            <div style="font-size:13px;color:#6b82a0;margin-top:4px;">Scan verified — fetching record…</div>
+          </div>
+          <div id="verifyCard" style="background:#132240;border-radius:16px;padding:28px;border:1px solid rgba(0,194,168,.2);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:12px;color:#00c2a8;font-size:14px;">
+              <div style="width:20px;height:20px;border:2px solid rgba(0,194,168,.3);border-top-color:#00c2a8;border-radius:50%;animation:vspin .8s linear infinite;"></div>
+              Loading…
+            </div>
+          </div>
+          <div style="text-align:center;margin-top:20px;font-size:11px;color:#3a5070;">
+            PASH-PEMA Laboratory Management Information System
+          </div>
+        </div>
+      </div>
+      <style>@keyframes vspin{to{transform:rotate(360deg)}}</style>
+    `;
+
+    // Load DB then show record
+    loadDB().then(() => {
+      const samples   = DB.samples   || {};
+      const customers = DB.customers || {};
+      const s    = samples[code];
+      const card = document.getElementById('verifyCard');
+
+      if (!s) {
+        card.innerHTML = `
+          <div style="text-align:center;padding:20px;">
+            <div style="font-size:40px;margin-bottom:12px;">❌</div>
+            <div style="color:#e8edf5;font-size:17px;font-weight:600;">Record Not Found</div>
+            <div style="color:#6b82a0;font-size:13px;margin-top:8px;">No sample found for code: <b style="color:#e8edf5;">${code}</b></div>
+          </div>`;
+        return;
+      }
+
+      const cust    = s.customerId ? customers[s.customerId] : null;
+      const isPaid  = s.payAmount  && parseFloat(s.payAmount) > 0;
+      const statusColor = {
+        'Collected':'#f59e0b','Processing':'#3b82f6','Ready':'#10b981',
+        'Delivered':'#6b7280','Cancelled':'#ef4444'
+      }[s.status] || '#00c2a8';
+
+      const row = (label, val) => val ? `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+          <span style="font-size:12px;color:#6b82a0;min-width:130px;">${label}</span>
+          <span style="font-size:13px;color:#e8edf5;text-align:right;font-weight:500;">${val}</span>
+        </div>` : '';
+
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
+          <span style="font-size:11px;letter-spacing:2px;color:${statusColor};font-family:'DM Mono',monospace;">${(s.status||'UNKNOWN').toUpperCase()}</span>
+        </div>
+
+        <div style="font-size:20px;font-weight:700;color:#e8edf5;margin-bottom:4px;">${s.name||'—'}</div>
+        <div style="font-size:12px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:20px;">CODE: ${code}</div>
+
+        ${row('Patient / Sample', s.name)}
+        ${cust ? row('Customer', cust.name) : ''}
+        ${row('Collection Date', s.date)}
+        ${row('Location', s.location)}
+        ${row('Collected By', s.collectedBy)}
+        ${row('Tested By', s.testedBy||'Pending')}
+        ${row('Result Date', s.resultDate||'Pending')}
+
+        ${isPaid ? `
+        <div style="margin-top:16px;background:rgba(0,194,168,.08);border:1px solid rgba(0,194,168,.2);border-radius:10px;padding:14px;">
+          <div style="font-size:11px;color:#00c2a8;letter-spacing:1px;margin-bottom:8px;">PAYMENT VERIFIED</div>
+          ${row('Amount', 'Rs ' + parseFloat(s.payAmount).toLocaleString('en-IN'))}
+          ${row('Method', s.payMethod)}
+          ${row('Reference', s.payRef||'N/A')}
+        </div>` : `
+        <div style="margin-top:16px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:14px;font-size:13px;color:#f59e0b;">
+          ⏳ Payment not yet recorded
+        </div>`}
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#3a5070;text-align:center;">
+          ✅ This document was issued by PASH-PEMA LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
+        </div>
+      `;
+    });
+  });
+})();
+
+
 // ── MOBILE MENU ──
 function isMobile(){ return window.innerWidth <= 768; }
 
@@ -3322,10 +3458,15 @@ function renderViewTable(){
   });
 }
 
-function downloadPDF(code){
+async function downloadPDF(code){
   const s = JSON.parse(dbGet('samples'))[code];
   const customers = JSON.parse(dbGet('customers')||'{}');
   const cust = s.customerId ? customers[s.customerId] : null;
+
+  // Generate QR code for the verification URL
+  const url   = verifyURL(code);
+  const qrImg = await generateQRDataURL(url);
+
   const doc = new jsPDF();
   // Header bar
   doc.setFillColor(10,22,40);
@@ -3371,6 +3512,19 @@ function downloadPDF(code){
   doc.setFont(undefined,'normal');
   const lines = doc.splitTextToSize(s.result||'No result entered yet.', 160);
   doc.text(lines, 20, y);
+
+  // ── QR Code block at bottom-right ──
+  if(qrImg){
+    const qrSize = 35;
+    const qrX    = 210 - qrSize - 12;
+    const qrY    = 250;
+    doc.setFillColor(255,255,255);
+    doc.roundedRect(qrX-3, qrY-3, qrSize+6, qrSize+6+8, 2, 2, 'F');
+    doc.addImage(qrImg, 'PNG', qrX, qrY, qrSize, qrSize);
+    doc.setFontSize(6);
+    doc.setTextColor(80,100,130);
+    doc.text('Scan to verify', qrX + qrSize/2, qrY + qrSize + 5, null, null, 'center');
+  }
 
   doc.setFontSize(8);
   doc.setTextColor(150);
@@ -3607,10 +3761,15 @@ function renderReceipts(){
   if(!shown) tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:28px;">No records found</td></tr>`;
 }
 
-function downloadReceiptPDF(code){
+async function downloadReceiptPDF(code){
   const s   = JSON.parse(dbGet('samples'))[code];
   const customers = JSON.parse(dbGet('customers')||'{}');
   const cust = s.customerId ? customers[s.customerId] : null;
+
+  // Generate QR for verification URL
+  const url   = verifyURL(code);
+  const qrImg = await generateQRDataURL(url);
+
   const doc = new jsPDF({ unit:'mm', format:'a5' });
   const W=148, H=210;
 
@@ -3711,6 +3870,19 @@ function downloadReceiptPDF(code){
   doc.text(s.status||'—', 45, statusY);
 
   // Footer
+  // ── QR Code — bottom-left corner ──
+  if(qrImg){
+    const qrSize = 28;
+    const qrX    = 10;
+    const qrY    = H - 10 - qrSize - 8;
+    doc.setFillColor(255,255,255);
+    doc.roundedRect(qrX-2, qrY-2, qrSize+4, qrSize+4+6, 1.5, 1.5, 'F');
+    doc.addImage(qrImg, 'PNG', qrX, qrY, qrSize, qrSize);
+    doc.setFontSize(5.5);
+    doc.setTextColor(80,100,130);
+    doc.text('Scan to verify', qrX + qrSize/2, qrY + qrSize + 4, null, null, 'center');
+  }
+
   doc.setDrawColor(200,215,235);
   doc.line(10,H-24,W-10,H-24);
   doc.setTextColor(140,160,190);
