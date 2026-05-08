@@ -1611,7 +1611,7 @@
           <thead>
             <tr>
               <th>Sample Code</th>
-              <th> Sample Name</th>
+              <th>Sample Name</th>
               <th>Customer Name</th>
               <th>Collection Date</th>
               <th>Amount (₹)</th>
@@ -2295,7 +2295,7 @@ function detailVerifyURL(code) {
           <div style="font-size:20px;font-weight:700;color:#e8edf5;margin-bottom:4px;">${s.name||'—'}</div>
           <div style="font-size:12px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:20px;">RECEIPT: ${code}</div>
 
-          ${row('Sample / Patient', s.name)}
+          ${row('Sample', s.name)}
           ${cust ? row('Customer', cust.name) : ''}
           ${row('Collection Date', s.date)}
 
@@ -2339,7 +2339,7 @@ function detailVerifyURL(code) {
           <div style="font-size:20px;font-weight:700;color:#e8edf5;margin-bottom:4px;">${s.name||'—'}</div>
           <div style="font-size:12px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:20px;">CODE: ${code}</div>
 
-          ${row('Patient / Sample', s.name)}
+          ${row('Sample', s.name)}
           ${cust ? row('Customer', cust.name) : ''}
           ${row('Collection Date', s.date)}
           ${row('Tested By', s.testedBy || 'Pending')}
@@ -2376,7 +2376,7 @@ function detailVerifyURL(code) {
           <div style="font-size:20px;font-weight:700;color:#e8edf5;margin-bottom:4px;">${s.name||'—'}</div>
           <div style="font-size:12px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:20px;">CODE: ${code}</div>
 
-          ${row('Patient / Sample', s.name)}
+          ${row('Sample', s.name)}
           ${cust ? row('Customer', cust.name) : ''}
           ${row('Collection Date', s.date)}
           ${row('Location', s.location)}
@@ -4255,7 +4255,7 @@ async function downloadReceiptPDF(code){
   };
 
   lbl('Sample Code',      code,            15, 59);
-  lbl('Sample / Patient', s.name||'—',     80, 59);
+  lbl('Sample', s.name||'—',     80, 59);
   lbl('Collection Date',  s.date||'—',     15, 71);
   lbl('Location',         s.location||'—', 80, 71);
   if(cust){
