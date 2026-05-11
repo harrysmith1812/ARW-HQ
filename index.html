@@ -134,6 +134,47 @@
     border-top: 1px solid var(--border);
   }
 
+  /* ── SESSION TIMER ── */
+  .session-timer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--navy);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .session-timer-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: .3px;
+  }
+  .session-timer-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+    transition: background .3s;
+  }
+  .session-timer-dot.warn { background: var(--yellow); }
+  .session-timer-dot.urgent { background: var(--red); animation: pulse-dot .8s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .session-timer-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    transition: color .3s;
+    min-width: 38px;
+    text-align: right;
+  }
+  .session-timer-val.warn { color: var(--yellow); }
+  .session-timer-val.urgent { color: var(--red); }
+
   .user-chip {
     background: var(--surface);
     border-radius: var(--radius);
@@ -1251,6 +1292,13 @@
   </div>
   <ul id="menu"></ul>
   <div class="sidebar-footer">
+    <div class="session-timer" id="sessionTimerBar" style="display:none;">
+      <div class="session-timer-label">
+        <div class="session-timer-dot" id="sessionDot"></div>
+        <span>Session</span>
+      </div>
+      <div class="session-timer-val" id="sessionTimerVal">10:00</div>
+    </div>
     <div class="user-chip">
       <div class="user-avatar" id="avatarInitial">–</div>
       <div>
@@ -2788,6 +2836,129 @@ function statusOptions(list, current){
 
 let currentUser='', currentRole='', currentCustomerId='';
 
+// ── SESSION TIMEOUT ──
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+let sessionTimerInterval = null;
+
+function startSessionTimer(expiryTimestamp) {
+  stopSessionTimer();
+  const bar = document.getElementById('sessionTimerBar');
+  const val = document.getElementById('sessionTimerVal');
+  const dot = document.getElementById('sessionDot');
+  if(bar) bar.style.display = 'flex';
+
+  function tick() {
+    const remaining = expiryTimestamp - Date.now();
+    if(remaining <= 0) {
+      if(val) val.textContent = '0:00';
+      stopSessionTimer();
+      // Auto-logout
+      sessionStorage.removeItem('session');
+      // Show brief message then reload
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(10,22,40,.95);z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;';
+      overlay.innerHTML = '<div style="font-size:40px;">⏱</div><div style="font-family:Playfair Display,serif;font-size:22px;color:#e8edf5;">Session Expired</div><div style="font-size:13px;color:#7a8fa8;font-family:DM Mono,monospace;letter-spacing:1px;">You have been logged out due to inactivity</div>';
+      document.body.appendChild(overlay);
+      setTimeout(() => location.reload(), 2000);
+      return;
+    }
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    const display = `${mins}:${secs.toString().padStart(2,'0')}`;
+    if(val) val.textContent = display;
+
+    // Update stored expiry so refresh restores current remaining time
+    const sess = JSON.parse(sessionStorage.getItem('session') || 'null');
+    if(sess) {
+      sess.expiry = expiryTimestamp;
+      sessionStorage.setItem('session', JSON.stringify(sess));
+    }
+
+    // Color states
+    if(remaining <= 60000) {
+      // < 1 min — urgent red
+      if(val) { val.classList.add('urgent'); val.classList.remove('warn'); }
+      if(dot) { dot.classList.add('urgent'); dot.classList.remove('warn'); }
+    } else if(remaining <= 3 * 60000) {
+      // < 3 min — warning yellow
+      if(val) { val.classList.add('warn'); val.classList.remove('urgent'); }
+      if(dot) { dot.classList.add('warn'); dot.classList.remove('urgent'); }
+    } else {
+      if(val) { val.classList.remove('warn','urgent'); }
+      if(dot) { dot.classList.remove('warn','urgent'); }
+    }
+  }
+  tick();
+  sessionTimerInterval = setInterval(tick, 1000);
+
+  // Reset timer on user activity
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(evt => {
+    document.removeEventListener(evt, resetSessionTimer);
+    document.addEventListener(evt, resetSessionTimer, { passive: true });
+  });
+}
+
+function resetSessionTimer() {
+  const sess = JSON.parse(sessionStorage.getItem('session') || 'null');
+  if(!sess) return;
+  const newExpiry = Date.now() + SESSION_TIMEOUT_MS;
+  sess.expiry = newExpiry;
+  sessionStorage.setItem('session', JSON.stringify(sess));
+  // restart interval with new expiry
+  startSessionTimer(newExpiry);
+}
+
+function stopSessionTimer() {
+  if(sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(evt => {
+    document.removeEventListener(evt, resetSessionTimer);
+  });
+  const bar = document.getElementById('sessionTimerBar');
+  if(bar) bar.style.display = 'none';
+}
+
+// ── RESTORE SESSION ON REFRESH ──
+function restoreSession() {
+  const raw = sessionStorage.getItem('session');
+  if(!raw) return false;
+  try {
+    const sess = JSON.parse(raw);
+    if(!sess || !sess.user || !sess.expiry) return false;
+    if(Date.now() >= sess.expiry) {
+      sessionStorage.removeItem('session');
+      return false;
+    }
+    // Restore state
+    currentUser   = sess.user;
+    currentRole   = sess.role;
+    currentCustomerId = sess.customerId || '';
+    currentPerms  = sess.perms || { ...DEFAULT_PERMS };
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main').style.flex='1';
+    document.getElementById('avatarInitial').textContent = sess.user[0].toUpperCase();
+    document.getElementById('sidebarUser').textContent   = sess.user;
+    if(sess.role === 'customer') {
+      document.getElementById('sidebarRole').textContent = (sess.customerId || '') + ' · Customer';
+    } else {
+      document.getElementById('sidebarRole').textContent = labelRole(sess.role);
+    }
+    if(isMobile()){
+      document.getElementById('mobileTopbar').style.display='flex';
+      const ta = document.getElementById('topbarAvatar');
+      if(ta) ta.textContent = sess.user[0].toUpperCase();
+    }
+    setupMenu();
+    if(sess.role !== 'customer') updateHelpdeskBadge();
+    startSessionTimer(sess.expiry);
+    syncTopbar();
+    return true;
+  } catch(e) {
+    sessionStorage.removeItem('session');
+    return false;
+  }
+}
+
 // ── PERMISSIONS (declared here so login() can reference them) ──
 const DEFAULT_PERMS = { customers:'none', sample:'none', list:'none', result:'none', view:'none', receipts:'none', accounting:'none' };
 let currentPerms = {};
@@ -2801,6 +2972,9 @@ function login(){
     currentUser = u;
     currentRole = users[u].role;
     currentPerms = users[u].permissions || { ...DEFAULT_PERMS };
+    // Persist session
+    const expiry = Date.now() + SESSION_TIMEOUT_MS;
+    sessionStorage.setItem('session', JSON.stringify({ user: u, role: currentRole, perms: currentPerms, expiry, type: 'staff' }));
     document.getElementById('loginScreen').style.display='none';
     document.getElementById('sidebar').style.display='flex';
     document.getElementById('main').style.flex='1';
@@ -2815,12 +2989,15 @@ function login(){
     }
     setupMenu();
     updateHelpdeskBadge();
+    startSessionTimer(expiry);
   } else {
     document.getElementById('loginError').textContent = 'Invalid username or password.';
   }
 }
 
 function logout(){
+  sessionStorage.removeItem('session');
+  stopSessionTimer();
   location.reload();
 }
 
@@ -2846,6 +3023,9 @@ function customerLogin(){
   currentUser      = cust.name;
   currentRole      = 'customer';
   currentCustomerId= cust.id;
+  // Persist session
+  const expiry = Date.now() + SESSION_TIMEOUT_MS;
+  sessionStorage.setItem('session', JSON.stringify({ user: cust.name, role: 'customer', customerId: cust.id, perms: {}, expiry, type: 'customer' }));
   document.getElementById('loginScreen').style.display='none';
   document.getElementById('sidebar').style.display='flex';
   document.getElementById('main').style.flex='1';
@@ -2858,6 +3038,7 @@ function customerLogin(){
     if(ta) ta.textContent = cust.name[0].toUpperCase();
   }
   setupMenu();
+  startSessionTimer(expiry);
 }
 
 function labelRole(r){
@@ -5327,40 +5508,56 @@ async function fpSendOtp(){
   const cust = Object.values(customers).find(c => (c.email||'').toLowerCase() === email);
   if(!cust){ errEl.textContent='No account found with this email address.'; return; }
 
-  await fpDispatchOtp(email, cust.name);
+  await fpDispatchOtp(email, cust.name, 1);
 }
 
-async function fpDispatchOtp(email, name){
-  const errEl = document.getElementById('fpStep1Error') || document.getElementById('fpStep2Error');
-  const btn   = document.getElementById('fpSendBtn');
+async function fpDispatchOtp(email, name, fromStep){
+  // fromStep: 1 = initial send, 2 = resend
+  const step    = fromStep || 1;
+  const errElId = step === 1 ? 'fpStep1Error' : 'fpStep2Error';
+  const errEl   = document.getElementById(errElId);
+  const btn     = document.getElementById('fpSendBtn');
+
+  if(errEl) errEl.textContent = '';
 
   // Generate 5-digit OTP
   fpGeneratedOtp = String(Math.floor(10000 + Math.random() * 90000));
-  fpOtpExpiry    = Date.now() + 5 * 60 * 1000;  // 5 minutes
+  fpOtpExpiry    = Date.now() + 5 * 60 * 1000;
   fpCurrentEmail = email;
 
-  // Disable button while sending
-  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Sending…'; }
+  const resendBtn = document.getElementById('fpResendBtn');
+  if(resendBtn) resendBtn.disabled = true;
 
   try {
-    await emailjs.send(FP_SERVICE, FP_TEMPLATE, {
+    const templateParams = {
       to_email:    email,
       to_name:     name || email,
       otp:         fpGeneratedOtp,
       expiry_mins: '5',
       app_name:    'PASH-PEMA LMIS',
-    });
+      user_email:  email,
+      user_name:   name || email,
+      passcode:    fpGeneratedOtp,
+      message:     'Your OTP is: ' + fpGeneratedOtp + '. Valid for 5 minutes.',
+    };
 
-    // Success → move to step 2
+    const response = await emailjs.send(FP_SERVICE, FP_TEMPLATE, templateParams);
+    console.log('EmailJS success:', response.status, response.text);
+
     document.getElementById('fpEmailDisplay').textContent = email;
     fpGoStep(2);
     fpStartTimer();
 
   } catch(err){
-    console.error('EmailJS error:', err);
-    if(errEl) errEl.textContent = 'Failed to send OTP. Please check your connection and try again.';
+    console.error('EmailJS error full object:', err);
+    const reason = err && err.text
+      ? err.text
+      : (err && err.message ? err.message : JSON.stringify(err));
+    if(errEl) errEl.textContent = 'Error: ' + reason;
   } finally {
-    if(btn){ btn.disabled=false; btn.textContent='Send OTP →'; }
+    if(btn){ btn.disabled = false; btn.textContent = 'Send OTP →'; }
+    if(resendBtn) resendBtn.disabled = false;
   }
 }
 
@@ -5450,7 +5647,7 @@ async function fpResendOtp(){
   }
   const customers = JSON.parse(dbGet('customers')||'{}');
   const cust = Object.values(customers).find(c=>(c.email||'').toLowerCase()===fpCurrentEmail);
-  await fpDispatchOtp(fpCurrentEmail, cust ? cust.name : fpCurrentEmail);
+  await fpDispatchOtp(fpCurrentEmail, cust ? cust.name : fpCurrentEmail, 2);
 }
 
 // ── Password strength ──
@@ -5526,6 +5723,8 @@ document.getElementById('fpOverlay').addEventListener('click', function(e){
   await loadDB();
   const initOverlay = document.getElementById('dbInitOverlay');
   if(initOverlay) initOverlay.style.display = 'none';
+  // Restore session if available (survives page refresh)
+  restoreSession();
 })();
 
 function syncTopbar(){
