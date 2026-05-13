@@ -1109,9 +1109,271 @@
   .dr-footer { padding:14px 24px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:10px; }
   .dr-word-count { font-size:11px; color:var(--text-dim); font-family:'DM Mono',monospace; }
 
-  /* ── FORGOT PASSWORD FLOW ── */
-  .fp-step { display: none; }
-  .fp-step.active { display: block; }
+  /* ── TEAM CHAT ── */
+  #team_chat { display:none; height:calc(100vh - 0px); overflow:hidden; }
+  #team_chat.active { display:flex; flex-direction:column; }
+
+  .chat-header {
+    padding: 20px 32px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: var(--navy);
+  }
+
+  .chat-online-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,212,160,.1);
+    border: 1px solid rgba(0,212,160,.25);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11px;
+    color: var(--green);
+    font-weight: 600;
+  }
+
+  .chat-online-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse-dot .8s ease-in-out infinite;
+  }
+
+  .chat-messages-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    scroll-behavior: smooth;
+  }
+
+  .chat-day-divider {
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 12px 0 8px;
+    position: relative;
+  }
+  .chat-day-divider::before, .chat-day-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 38%;
+    height: 1px;
+    background: var(--border);
+  }
+  .chat-day-divider::before { left: 0; }
+  .chat-day-divider::after  { right: 0; }
+
+  .chat-msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    max-width: 72%;
+  }
+
+  .chat-msg.mine {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .chat-msg.theirs {
+    align-self: flex-start;
+  }
+
+  .chat-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--navy);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+  }
+
+  .chat-avatar.admin-av   { background: var(--red); color: #fff; }
+  .chat-avatar.entry-av   { background: var(--accent); color: var(--navy); }
+  .chat-avatar.result-av  { background: var(--yellow); color: var(--navy); }
+  .chat-avatar.view-av    { background: var(--green); color: var(--navy); }
+
+  .chat-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .chat-msg.mine .chat-bubble-wrap { align-items: flex-end; }
+  .chat-msg.theirs .chat-bubble-wrap { align-items: flex-start; }
+
+  .chat-sender-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 2px;
+    padding: 0 4px;
+  }
+
+  .chat-role-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+  }
+  .chat-role-badge.admin  { background: rgba(255,77,106,.15); color: var(--red); }
+  .chat-role-badge.entry  { background: rgba(0,194,168,.12); color: var(--accent); }
+  .chat-role-badge.result { background: rgba(245,200,66,.12); color: var(--yellow); }
+  .chat-role-badge.view   { background: rgba(0,212,160,.12); color: var(--green); }
+
+  .chat-bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 4px;
+    padding: 9px 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+    word-break: break-word;
+    max-width: 100%;
+  }
+
+  .chat-msg.mine .chat-bubble {
+    background: var(--navy-light);
+    border-color: rgba(0,194,168,.3);
+    border-radius: 14px 14px 4px 14px;
+    color: var(--text);
+  }
+
+  .chat-time {
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 0 4px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chat-input-bar {
+    padding: 16px 32px;
+    border-top: 1px solid var(--border);
+    background: var(--navy);
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .chat-input-wrap {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: flex-end;
+    transition: border-color .2s;
+    overflow: hidden;
+  }
+  .chat-input-wrap:focus-within { border-color: var(--accent); }
+
+  #chatInput {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 11px 14px;
+    outline: none;
+    resize: none;
+    max-height: 120px;
+    min-height: 42px;
+    line-height: 1.5;
+  }
+  #chatInput::placeholder { color: var(--text-dim); }
+
+  #chatSendBtn {
+    background: var(--accent);
+    color: var(--navy);
+    border: none;
+    border-radius: 10px;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    flex-shrink: 0;
+    margin: 4px;
+    transition: background .15s, transform .1s;
+  }
+  #chatSendBtn:hover { background: var(--accent-hover); transform: scale(1.05); }
+  #chatSendBtn:active { transform: scale(.95); }
+  #chatSendBtn:disabled { background: var(--border); cursor: not-allowed; transform: none; }
+
+  .chat-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-dim);
+    padding: 40px;
+  }
+  .chat-empty-icon { font-size: 40px; opacity: .4; }
+
+  .chat-typing-indicator {
+    display: none;
+    align-self: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 4px;
+    padding: 10px 14px;
+    gap: 4px;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .chat-typing-indicator.show { display: flex; }
+  .typing-dot {
+    width: 6px; height: 6px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    animation: typing-bounce .9s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: .15s; }
+  .typing-dot:nth-child(3) { animation-delay: .3s; }
+  @keyframes typing-bounce {
+    0%,60%,100% { transform: translateY(0); opacity:.4; }
+    30% { transform: translateY(-5px); opacity:1; }
+  }
+
+  .chat-unread-badge {
+    background: var(--accent);
+    color: var(--navy);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+
+  @media (max-width: 768px) {
+    .chat-header { padding: 14px 16px 12px; }
+    .chat-messages-wrap { padding: 14px 12px; }
+    .chat-input-bar { padding: 12px 12px; }
+    .chat-msg { max-width: 88%; }
+  }
+
+
 
   .fp-back-btn {
     background: none;
@@ -2142,6 +2404,42 @@
     </div>
   </div>
 
+  <!-- TEAM CHAT (internal staff only) -->
+  <div id="team_chat" class="panel">
+    <div class="chat-header">
+      <div>
+        <div class="page-title">Team Chat</div>
+        <div class="page-sub">Internal staff communication — visible to all team members</div>
+      </div>
+      <div class="chat-online-pill">
+        <span class="chat-online-dot"></span>
+        <span id="chatOnlineLabel">Live</span>
+      </div>
+    </div>
+
+    <div class="chat-messages-wrap" id="chatMessagesWrap">
+      <div class="chat-empty" id="chatEmpty">
+        <span class="chat-empty-icon">🗨️</span>
+        <span style="font-size:14px;">No messages yet</span>
+        <span style="font-size:12px;">Start the conversation — say hello to your team!</span>
+      </div>
+    </div>
+
+    <div class="chat-typing-indicator" id="chatTypingIndicator">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+
+    <div class="chat-input-bar">
+      <div class="chat-input-wrap">
+        <textarea id="chatInput" placeholder="Message your team…" rows="1"
+          onkeydown="chatKeyDown(event)" oninput="chatAutoResize(this)"></textarea>
+      </div>
+      <button id="chatSendBtn" onclick="sendChatMessage()" title="Send (Enter)">➤</button>
+    </div>
+  </div>
+
 </div><!-- /main -->
 
 <!-- TOAST -->
@@ -2318,7 +2616,9 @@ const JSONBIN = {
   // Bin: samples
   samples: { id: '69fc0da0adc21f119a653426', key: MASTER_KEY },
   // Bin: helpQueries
-  help:    { id: '69fc0dbc250b1311c3157d20', key: MASTER_KEY }
+  help:    { id: '69fc0dbc250b1311c3157d20', key: MASTER_KEY },
+  // Bin: internal staff chat
+  chats:   { id: '6a043f57250b1311c3430778', key: MASTER_KEY }
 };
 
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
@@ -2330,13 +2630,14 @@ let DB = {
   samples: {},
   customerCounter: 0,
   sampleCounter: 0,
-  helpQueries: []
+  helpQueries: [],
+  chatMessages: []
 };
 
 let dbReady = false;
 
 // Per-bin save queues so writes never race each other
-const dbQueue = { core: Promise.resolve(), samples: Promise.resolve(), help: Promise.resolve() };
+const dbQueue = { core: Promise.resolve(), samples: Promise.resolve(), help: Promise.resolve(), chats: Promise.resolve() };
 
 // ── READ a bin ──
 async function binGet(bin) {
@@ -2377,10 +2678,11 @@ async function binPut(bin, data) {
 // ── LOAD all three bins in parallel ──
 async function loadDB() {
   try {
-    const [core, sampleData, helpData] = await Promise.all([
+    const [core, sampleData, helpData, chatData] = await Promise.all([
       binGet('core'),
       binGet('samples'),
-      binGet('help')
+      binGet('help'),
+      binGet('chats')
     ]);
     DB.users           = core.users           || {};
     DB.customers       = core.customers       || {};
@@ -2388,6 +2690,7 @@ async function loadDB() {
     DB.sampleCounter   = core.sampleCounter   || 0;
     DB.samples         = sampleData.samples   || {};
     DB.helpQueries     = helpData.helpQueries || [];
+    DB.chatMessages    = chatData.messages    || [];
   } catch (err) {
     console.error('loadDB error:', err);
     // Show specific error in loader so it's debuggable
@@ -2446,10 +2749,23 @@ function saveHelp() {
   return dbQueue.help;
 }
 
+function saveChats() {
+  dbQueue.chats = dbQueue.chats.then(async () => {
+    try {
+      await binPut('chats', { messages: DB.chatMessages });
+    } catch (err) {
+      console.error('saveChats error:', err);
+      toast('⚠️ Could not sync chat messages.', 'err');
+    }
+  });
+  return dbQueue.chats;
+}
+
 // saveDB() is called by the dbSet shim — route each key to the right bin
 function saveDB(key) {
   if (key === 'samples')                        return saveSamples();
   if (key === 'helpQueries')                    return saveHelp();
+  if (key === 'chatMessages')                   return saveChats();
   // users, customers, counters all go to core
   return saveCore();
 }
@@ -2481,6 +2797,7 @@ function dbGet(key) {
   if (key === 'customerCounter') return String(DB.customerCounter);
   if (key === 'sampleCounter')   return String(DB.sampleCounter);
   if (key === 'helpQueries')     return JSON.stringify(DB.helpQueries);
+  if (key === 'chatMessages')    return JSON.stringify(DB.chatMessages);
   return null;
 }
 
@@ -2491,6 +2808,7 @@ function dbSet(key, value) {
   else if (key === 'customerCounter') DB.customerCounter = parseInt(value) || 0;
   else if (key === 'sampleCounter')   DB.sampleCounter   = parseInt(value) || 0;
   else if (key === 'helpQueries')     DB.helpQueries     = JSON.parse(value);
+  else if (key === 'chatMessages')    DB.chatMessages    = JSON.parse(value);
   saveDB(key);   // pass key so saveDB routes to the correct bin
 }
 
@@ -3089,6 +3407,7 @@ const menuDefs = {
   accounting:   { label:'Accounting',        icon:'💰' },
   export:       { label:'Export to Excel',   icon:'📥' },
   helpdesk:     { label:'Help Desk',         icon:'💬' },
+  team_chat:    { label:'Team Chat',         icon:'🗨️' },
   cust_samples:  { label:'My Samples',        icon:'🧪' },
   cust_receipts: { label:'My Receipts',       icon:'🧾' },
   cust_password: { label:'Change Password',   icon:'🔐' },
@@ -3097,7 +3416,7 @@ const menuDefs = {
 function setupMenu(){
   let items;
   if(currentRole==='admin'){
-    items = ['users','admin','customers','sample','list','result','view','receipts','accounting','export','helpdesk'];
+    items = ['users','admin','customers','sample','list','result','view','receipts','accounting','export','helpdesk','team_chat'];
   } else if(currentRole==='customer'){
     items = ['cust_samples','cust_receipts','cust_password'];
   } else {
@@ -3106,7 +3425,7 @@ function setupMenu(){
     const entryFirst = ['sample','customers','list','result','view','receipts','accounting'];
     const ordered = entryFirst.filter(id => allowed.includes(id));
     const rest = allowed.filter(id => !ordered.includes(id));
-    items = [...ordered, ...rest];
+    items = [...ordered, ...rest, 'team_chat'];
   }
   const el = document.getElementById('menu');
   el.innerHTML='';
@@ -3164,6 +3483,7 @@ function show(id){
   if(id==='receipts')      renderReceipts();
   if(id==='export')        { previewExportCount(); }
   if(id==='helpdesk')      renderHelpDesk();
+  if(id==='team_chat')     openTeamChat();
   if(id==='cust_samples')  renderCustSamples();
   if(id==='cust_receipts') renderCustReceipts();
   if(id==='cust_password') resetChangePasswordForm();
@@ -5716,7 +6036,237 @@ document.getElementById('fpOverlay').addEventListener('click', function(e){
 
 // ══ END FORGOT PASSWORD ══
 
-// ── STARTUP: load DB then reveal app ──
+// ══════════════════════════════════════════
+// TEAM CHAT — internal staff only
+// ══════════════════════════════════════════
+
+let chatPollInterval   = null;
+let chatLastSeenCount  = 0;   // how many messages we last rendered
+let chatLastSeenTs     = 0;   // timestamp of newest message we've seen
+let chatIsOpen         = false;
+
+// ── Role avatar colour ──
+function chatAvatarClass(role){
+  return { admin:'admin-av', entry:'entry-av', result:'result-av', view:'view-av' }[role] || 'entry-av';
+}
+function chatRoleBadgeClass(role){
+  return { admin:'admin', entry:'entry', result:'result', view:'view' }[role] || 'entry';
+}
+function chatRoleLabel(role){
+  return { admin:'Admin', entry:'Entry', result:'Results', view:'View' }[role] || role;
+}
+
+// ── Called when user clicks Team Chat in menu ──
+function openTeamChat(){
+  chatIsOpen = true;
+  renderChatMessages();
+  startChatPoll();
+  setTimeout(()=>{
+    scrollChatToBottom();
+    document.getElementById('chatInput').focus();
+  }, 80);
+  updateChatBadge(0);   // clear unread badge when opened
+  chatLastSeenTs = Date.now();
+}
+
+// ── Called when leaving the chat panel (any other menu item) ──
+function stopChatPoll(){
+  chatIsOpen = false;
+  clearInterval(chatPollInterval);
+  chatPollInterval = null;
+}
+
+// ── Poll JSONBin every 5 s for new messages ──
+function startChatPoll(){
+  clearInterval(chatPollInterval);
+  chatPollInterval = setInterval(async ()=>{
+    try {
+      const data = await binGet('chats');
+      const msgs = data.messages || [];
+      DB.chatMessages = msgs;
+      if(msgs.length !== chatLastSeenCount){
+        renderChatMessages();
+        if(!chatIsOpen){
+          const newCount = msgs.length - chatLastSeenCount;
+          updateChatBadge(newCount > 0 ? newCount : 0);
+        } else {
+          scrollChatToBottom();
+          chatLastSeenTs = Date.now();
+          updateChatBadge(0);
+        }
+        chatLastSeenCount = msgs.length;
+      }
+    } catch(e){
+      console.warn('Chat poll error:', e);
+    }
+  }, 5000);
+}
+
+// ── Render all messages into the chat panel ──
+function renderChatMessages(){
+  const msgs  = DB.chatMessages || [];
+  const wrap  = document.getElementById('chatMessagesWrap');
+  const empty = document.getElementById('chatEmpty');
+  if(!wrap) return;
+
+  if(msgs.length === 0){
+    if(empty) empty.style.display = 'flex';
+    // Clear any existing messages but keep empty state
+    const existing = wrap.querySelectorAll('.chat-msg, .chat-day-divider');
+    existing.forEach(el => el.remove());
+    chatLastSeenCount = 0;
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+
+  // Only re-render if count changed (avoid full repaint on poll)
+  if(msgs.length === chatLastSeenCount && wrap.querySelector('.chat-msg')) return;
+
+  // Full render
+  const existing = wrap.querySelectorAll('.chat-msg, .chat-day-divider');
+  existing.forEach(el => el.remove());
+
+  let lastDay = '';
+  msgs.forEach(msg => {
+    const msgDate = new Date(msg.ts);
+    const dayStr  = msgDate.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'short' });
+    if(dayStr !== lastDay){
+      const div = document.createElement('div');
+      div.className = 'chat-day-divider';
+      div.textContent = dayStr;
+      wrap.appendChild(div);
+      lastDay = dayStr;
+    }
+    const isMe = msg.sender === currentUser;
+    const el   = buildChatBubble(msg, isMe);
+    wrap.appendChild(el);
+  });
+
+  chatLastSeenCount = msgs.length;
+}
+
+// ── Build a single chat bubble element ──
+function buildChatBubble(msg, isMe){
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-msg ' + (isMe ? 'mine' : 'theirs');
+
+  const avClass = chatAvatarClass(msg.role);
+  const initial = (msg.sender || '?')[0].toUpperCase();
+  const timeStr = new Date(msg.ts).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+  const roleLabel = chatRoleLabel(msg.role);
+  const roleCls   = chatRoleBadgeClass(msg.role);
+
+  wrap.innerHTML = `
+    <div class="chat-avatar ${avClass}">${initial}</div>
+    <div class="chat-bubble-wrap">
+      ${!isMe ? `<div class="chat-sender-row">
+        <span style="font-weight:600;color:var(--text);font-size:11px;">${escHtml(msg.sender)}</span>
+        <span class="chat-role-badge ${roleCls}">${roleLabel}</span>
+      </div>` : ''}
+      <div class="chat-bubble">${escHtml(msg.text)}</div>
+      <div class="chat-time">${timeStr}</div>
+    </div>
+  `;
+  return wrap;
+}
+
+function escHtml(str){
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/\n/g,'<br>');
+}
+
+// ── Send a message ──
+async function sendChatMessage(){
+  const inp  = document.getElementById('chatInput');
+  const btn  = document.getElementById('chatSendBtn');
+  const text = (inp.value || '').trim();
+  if(!text) return;
+
+  inp.value = '';
+  chatAutoResize(inp);
+  btn.disabled = true;
+
+  const msg = {
+    id:     Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    sender: currentUser,
+    role:   currentRole,
+    text:   text,
+    ts:     Date.now()
+  };
+
+  DB.chatMessages = DB.chatMessages || [];
+  DB.chatMessages.push(msg);
+
+  // Optimistic render
+  const wrap  = document.getElementById('chatMessagesWrap');
+  const empty = document.getElementById('chatEmpty');
+  if(empty) empty.style.display = 'none';
+  wrap.appendChild(buildChatBubble(msg, true));
+  chatLastSeenCount = DB.chatMessages.length;
+  scrollChatToBottom();
+
+  try {
+    await binPut('chats', { messages: DB.chatMessages });
+  } catch(e){
+    toast('⚠️ Message could not be sent — check your connection.', 'err');
+    // Rollback optimistic update
+    DB.chatMessages.pop();
+    chatLastSeenCount = DB.chatMessages.length;
+    renderChatMessages();
+  } finally {
+    btn.disabled = false;
+    inp.focus();
+  }
+}
+
+// ── Keyboard: Enter to send, Shift+Enter for newline ──
+function chatKeyDown(e){
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+// ── Auto-resize textarea ──
+function chatAutoResize(el){
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Scroll chat to the latest message ──
+function scrollChatToBottom(){
+  const wrap = document.getElementById('chatMessagesWrap');
+  if(wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── Unread badge on sidebar button ──
+function updateChatBadge(count){
+  const btn = document.getElementById('mbtn_team_chat');
+  if(!btn) return;
+  const badge = count > 0
+    ? ` <span class="chat-unread-badge">${count}</span>`
+    : '';
+  btn.innerHTML = `🗨️ Team Chat${badge}`;
+}
+
+// Stop poll when switching away from chat panel
+const _origShow = show;
+// Patch the show() function to stop chat poll when leaving
+(function(){
+  const origShow = window.show || show;
+  window.show = function(id){
+    if(id !== 'team_chat') stopChatPoll();
+    origShow(id);
+  };
+})();
+
+// ══ END TEAM CHAT ══
+
+
 (async function init(){
   showLoader('Connecting to database…');
   document.getElementById('dbInitOverlay') && (document.getElementById('dbInitOverlay').style.display = 'flex');
