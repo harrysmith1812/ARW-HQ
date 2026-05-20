@@ -1479,10 +1479,6 @@
   .pw-strength-fill { height: 100%; border-radius: 2px; width: 0%; transition: width .3s, background .3s; }
   .pw-strength-label { font-size: 10px; color: var(--text-dim); margin-top: 3px; text-align: right; }
 
-  /* ── Step visibility — CRITICAL: only the active step is shown ── */
-  .fp-step { display: none; }
-  .fp-step.active { display: block; }
-
   #fpOverlay {
     position: fixed; inset: 0;
     background: rgba(0,0,0,.72);
@@ -2428,24 +2424,24 @@
     <!-- ══ LOGIN LOGS TAB ══ -->
     <div id="logsTabLoginPanel" style="padding-top:4px;">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:16px 0 16px;">
-        <div class="field" style="margin:0;flex:1;min-width:160px;">
-          <label>Search User</label>
-          <input id="logSearchUser" class="inp" placeholder="Username or role…" oninput="renderLoginLogs()">
+        <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+          <label class="form-label">Search User</label>
+          <input id="logSearchUser" class="form-input" placeholder="Username or role…" oninput="renderLoginLogs()">
         </div>
-        <div class="field" style="margin:0;">
-          <label>From Date</label>
-          <input id="logDateFrom" type="date" class="inp" onchange="renderLoginLogs()">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">From Date</label>
+          <input id="logDateFrom" type="date" class="form-input" onchange="renderLoginLogs()">
         </div>
-        <div class="field" style="margin:0;">
-          <label>To Date</label>
-          <input id="logDateTo" type="date" class="inp" onchange="renderLoginLogs()">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">To Date</label>
+          <input id="logDateTo" type="date" class="form-input" onchange="renderLoginLogs()">
         </div>
-        <button class="btn-ghost" onclick="clearLogFilters()" style="height:38px;align-self:flex-end;">Clear</button>
-        <button class="btn-sm" onclick="exportLoginLogsExcel()" style="height:38px;align-self:flex-end;">📥 Export CSV</button>
+        <button class="btn-secondary" onclick="clearLogFilters()" style="height:38px;">Clear</button>
+        <button class="btn-primary" onclick="exportLoginLogsExcel()" style="height:38px;">📥 Export CSV</button>
       </div>
       <div id="logSummaryBar" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;"></div>
-      <div class="tbl-wrap">
-        <table id="loginLogsTable">
+      <div class="table-wrap">
+        <table class="data-table" id="loginLogsTable">
           <thead>
             <tr>
               <th>#</th>
@@ -2470,25 +2466,25 @@
     <!-- ══ VISITOR LOGS TAB ══ -->
     <div id="logsTabVisitorPanel" style="display:none;padding-top:4px;">
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:16px 0 16px;">
-        <div class="field" style="margin:0;flex:1;min-width:160px;">
-          <label>Search (IP / Country / Page)</label>
-          <input id="visitorSearch" class="inp" placeholder="IP, country, page…" oninput="renderVisitorLogs()">
+        <div class="form-group" style="margin:0;flex:1;min-width:160px;">
+          <label class="form-label">Search (IP / Country / Page)</label>
+          <input id="visitorSearch" class="form-input" placeholder="IP, country, page…" oninput="renderVisitorLogs()">
         </div>
-        <div class="field" style="margin:0;">
-          <label>From Date</label>
-          <input id="visitorDateFrom" type="date" class="inp" onchange="renderVisitorLogs()">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">From Date</label>
+          <input id="visitorDateFrom" type="date" class="form-input" onchange="renderVisitorLogs()">
         </div>
-        <div class="field" style="margin:0;">
-          <label>To Date</label>
-          <input id="visitorDateTo" type="date" class="inp" onchange="renderVisitorLogs()">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">To Date</label>
+          <input id="visitorDateTo" type="date" class="form-input" onchange="renderVisitorLogs()">
         </div>
-        <button class="btn-ghost" onclick="clearVisitorFilters()" style="height:38px;align-self:flex-end;">Clear</button>
-        <button class="btn-sm" onclick="exportVisitorLogsCSV()" style="height:38px;align-self:flex-end;">📥 Export CSV</button>
-        <button class="btn-danger" onclick="clearAllVisitorLogs()" style="height:38px;font-size:12px;align-self:flex-end;">🗑 Clear All</button>
+        <button class="btn-secondary" onclick="clearVisitorFilters()" style="height:38px;">Clear</button>
+        <button class="btn-primary" onclick="exportVisitorLogsCSV()" style="height:38px;">📥 Export CSV</button>
+        <button class="btn-danger" onclick="clearAllVisitorLogs()" style="height:38px;font-size:12px;">🗑 Clear All</button>
       </div>
       <div id="visitorSummaryBar" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;"></div>
-      <div class="tbl-wrap">
-        <table id="visitorLogsTable">
+      <div class="table-wrap">
+        <table class="data-table" id="visitorLogsTable">
           <thead>
             <tr>
               <th>#</th>
@@ -2705,7 +2701,7 @@
       <div class="dr-word-count" id="drWordCount">0 words</div>
       <div style="display:flex;gap:10px;">
         <button class="btn-ghost" onclick="closeDetailedResults()">Cancel</button>
-        <button id="drSaveBtn" class="btn-sm" onclick="saveDetailedResults()" style="padding:10px 28px;">💾 Save Results</button>
+        <button class="btn-sm" onclick="saveDetailedResults()" style="padding:10px 28px;">💾 Save Results</button>
       </div>
     </div>
   </div>
@@ -3024,31 +3020,12 @@ function dldetailURL(code) {
         const s         = samples[dlCode];
         const msg       = document.getElementById('dlMsg');
 
-        if (!s) {
-          if(msg){ msg.style.color = '#ff4d6a'; msg.textContent = 'Error: Sample code not found: ' + dlCode; }
-          return;
-        }
-
-        // If detailedResultsText was not synced to server yet, generate PDF from result field
-        if (!s.detailedResultsText && s.result) {
-          s.detailedResultsText = '<p>' + s.result.replace(/\n/g,'</p><p>') + '</p>';
-        }
-        if (!s.detailedResultsText) {
-          if(msg){ msg.style.color = '#ff4d6a'; msg.textContent = 'No detailed report content found for code ' + dlCode + '. Please save a detailed report for this sample first.'; }
+        if (!s || !s.detailedResultsText) {
+          if(msg){ msg.style.color = '#ff4d6a'; msg.textContent = 'Error: No detailed report found for code ' + dlCode; }
           return;
         }
 
         try {
-          // Wait for jsPDF CDN library to be ready before generating PDF
-          await new Promise((resolve, reject) => {
-            let tries = 0;
-            const check = () => {
-              if (window.jspdf && window.jspdf.jsPDF) { resolve(); return; }
-              if (++tries > 40) { reject(new Error('jsPDF library did not load. Check your internet connection.')); return; }
-              setTimeout(check, 200);
-            };
-            check();
-          });
           await downloadDetailedReportPDF(dlCode);
           // PDF downloaded successfully — doc.save() may have navigated/blanked the page
           // so guard the DOM update
@@ -3198,11 +3175,6 @@ function dldetailURL(code) {
           <div style="margin-top:14px;background:rgba(0,194,168,.05);border:1px solid rgba(0,194,168,.15);border-radius:10px;padding:16px;">
             <div style="font-size:11px;color:#00c2a8;letter-spacing:1px;margin-bottom:10px;font-weight:700;">📋 DETAILED REPORT</div>
             <div style="font-size:12px;color:#c8d8ea;line-height:1.8;white-space:pre-wrap;max-height:420px;overflow-y:auto;">${detailText}</div>
-          </div>
-          <div style="margin-top:16px;">
-            <button id="dlDetailBtn" onclick="handleDetailPageDownload('${code}')" style="width:100%;background:#00c2a8;color:#0a1628;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;padding:14px;cursor:pointer;letter-spacing:.5px;transition:background .15s;">
-              ⬇ Download Detailed Report PDF
-            </button>
           </div>` : `
           <div style="margin-top:16px;background:rgba(100,120,160,.06);border:1px solid rgba(100,120,160,.2);border-radius:10px;padding:14px;font-size:13px;color:#7a8fa8;">
             📄 No detailed report content found for this record.
@@ -3249,33 +3221,6 @@ function dldetailURL(code) {
   });
 })();
 
-
-// ── DETAIL PAGE: Download button handler (for ?detail=CODE public page) ──
-// Reuses DB already loaded by checkVerifyMode, so no extra fetch needed.
-async function handleDetailPageDownload(code) {
-  const btn = document.getElementById('dlDetailBtn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating PDF…'; }
-  try {
-    // Wait for jsPDF to be available (CDN may still be loading)
-    await new Promise((resolve, reject) => {
-      let tries = 0;
-      const check = () => {
-        if (window.jspdf && window.jspdf.jsPDF) { resolve(); return; }
-        if (++tries > 40) { reject(new Error('jsPDF library did not load in time.')); return; }
-        setTimeout(check, 200);
-      };
-      check();
-    });
-    await downloadDetailedReportPDF(code);
-    if (btn) { btn.textContent = '✓ Download Started'; btn.style.background = '#00d4a0'; }
-  } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = '⬇ Download Detailed Report PDF'; }
-    const errDiv = document.createElement('div');
-    errDiv.style.cssText = 'margin-top:10px;color:#ff4d6a;font-size:12px;text-align:center;';
-    errDiv.textContent = 'Error: ' + (e.message || 'Could not generate PDF.');
-    btn && btn.parentNode && btn.parentNode.appendChild(errDiv);
-  }
-}
 
 // ── MOBILE MENU ──
 function isMobile(){ return window.innerWidth <= 768; }
@@ -4588,38 +4533,23 @@ function closeDetailedResults(){
 
 function saveDetailedResults(){
   if(!drCurrentCode){ toast('No record selected','err'); return; }
-  if(!DB.samples[drCurrentCode]){ toast('Record not found','err'); return; }
-
-  const btn = document.getElementById('drSaveBtn');
-  if(btn){ btn.disabled = true; btn.innerHTML = '⏳ Saving…'; }
-
-  DB.samples[drCurrentCode].detailedResultsText = document.getElementById('detailedResultsEditor').innerHTML;
-
-  // Directly persist to JSONBin and wait for confirmation
-  binPut('samples', { samples: DB.samples })
-    .then(() => {
-      toast('✓ Detailed results saved & synced');
-      closeDetailedResults();
-      renderResultTable();
-      const viewPanel = document.getElementById('view');
-      if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
-    })
-    .catch(err => {
-      console.error('saveDetailedResults sync error:', err);
-      toast('⚠️ Could not sync to server — please try saving again.', 'err');
-      if(btn){ btn.disabled = false; btn.innerHTML = '💾 Save Results'; }
-    });
+  const samples = JSON.parse(dbGet('samples')||'{}');
+  if(!samples[drCurrentCode]){ toast('Record not found','err'); return; }
+  samples[drCurrentCode].detailedResultsText = document.getElementById('detailedResultsEditor').innerHTML;
+  dbSet('samples', JSON.stringify(samples));
+  toast('✓ Detailed results saved');
+  closeDetailedResults();
+  renderResultTable();
+  const viewPanel = document.getElementById('view');
+  if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
 }
 
 function removeDetailedResults(code){
-  if(!DB.samples[code]) return;
-  delete DB.samples[code].detailedResultsText;
-  binPut('samples', { samples: DB.samples })
-    .then(() => toast('Detailed results removed'))
-    .catch(err => {
-      console.error('removeDetailedResults sync error:', err);
-      toast('⚠️ Could not sync removal to server.', 'err');
-    });
+  const samples = JSON.parse(dbGet('samples')||'{}');
+  if(!samples[code]) return;
+  delete samples[code].detailedResultsText;
+  dbSet('samples', JSON.stringify(samples));
+  toast('Detailed results removed');
   renderResultTable();
   const viewPanel = document.getElementById('view');
   if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
@@ -6151,12 +6081,10 @@ function fpVerifyOtp(){
   errEl.textContent = '';
 
   if(entered.length < 5){ errEl.textContent='Please enter all 5 digits.'; return; }
-  if(!fpGeneratedOtp || !fpOtpExpiry){ errEl.textContent='No OTP was generated. Please go back and request a new one.'; return; }
   if(Date.now() > fpOtpExpiry){ errEl.textContent='OTP has expired. Please request a new one.'; return; }
   if(entered !== fpGeneratedOtp){ errEl.textContent='Incorrect OTP. Please try again.'; return; }
 
-  // Verified ✓ — invalidate OTP so it cannot be reused
-  fpGeneratedOtp = '';
+  // Verified ✓
   clearInterval(fpTimerInterval);
   fpGoStep(3);
   setTimeout(()=>document.getElementById('fpNewPass').focus(),150);
@@ -6218,14 +6146,13 @@ function fpResetPassword(){
   if(newPw.length < 6)   { errEl.textContent='Password must be at least 6 characters.'; return; }
   if(newPw !== confPw)   { errEl.textContent='Passwords do not match.'; return; }
 
-  // Save new password directly to DB (avoids JSON round-trip key mismatch)
-  const custKey = Object.keys(DB.customers).find(k =>
-    (DB.customers[k].email||'').toLowerCase() === fpCurrentEmail
-  );
-  if(!custKey){ errEl.textContent='Customer record not found. Please contact support.'; return; }
+  // Save new password to customer record
+  const customers = JSON.parse(dbGet('customers')||'{}');
+  const cust = Object.values(customers).find(c=>(c.email||'').toLowerCase()===fpCurrentEmail);
+  if(!cust){ errEl.textContent='Customer record not found. Please contact support.'; return; }
 
-  DB.customers[custKey].portalPassword = newPw;
-  saveCore(); // persist to server
+  customers[cust.id].portalPassword = newPw;
+  dbSet('customers', JSON.stringify(customers));
 
   // Invalidate OTP
   fpGeneratedOtp = '';
@@ -6929,17 +6856,6 @@ const _origShow = show;
 
 // ══ END TEAM CHAT ══
 
-// ══ DISABLE RIGHT-CLICK ON LOGIN SCREEN ══
-(function(){
-  document.addEventListener('contextmenu', function(e){
-    const loginScreen = document.getElementById('loginScreen');
-    if(loginScreen && loginScreen.style.display !== 'none' && loginScreen.contains(e.target)){
-      e.preventDefault();
-      return false;
-    }
-  });
-})();
-// ══ END DISABLE RIGHT-CLICK ON LOGIN SCREEN ══
 
 (async function init(){
   showLoader('Connecting to database…');
