@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PASH-ARW-HQ LMIS</title>
+<title>PASH-PEMA LMIS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init('fbebs-5tknmsYlSLW');</script>
@@ -1526,7 +1526,7 @@
 
 <!-- DB LOADING SCREEN -->
 <div id="dbInitOverlay" style="position:fixed;inset:0;background:var(--navy);z-index:99998;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;">
-  <div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--text);">PASH-ARW-HQ</div>
+  <div style="font-family:'Playfair Display',serif;font-size:24px;color:var(--text);">PASH-PEMA</div>
   <div style="width:42px;height:42px;border:3px solid rgba(0,194,168,.2);border-top-color:var(--accent);border-radius:50%;animation:dbspin .8s linear infinite;"></div>
   <div style="font-size:12px;color:var(--text-dim);font-family:'DM Mono',monospace;letter-spacing:2px;">LOADING DATABASE…</div>
   <style>@keyframes dbspin{to{transform:rotate(360deg)}}</style>
@@ -1541,7 +1541,7 @@
   </button>
   <div class="topbar-brand">
     <span>LMIS</span>
-    PASH-ARW-HQ
+    PASH-PEMA
   </div>
   <div id="topbarAvatar" style="width:32px;height:32px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--navy);"></div>
 </div>
@@ -1553,7 +1553,7 @@
 <nav id="sidebar" style="display:none;">
   <div class="brand">
     <div class="brand-label">LMIS</div>
-    <div class="brand-name">PASH-ARW-HQ</div>
+    <div class="brand-name">PASH-PEMA</div>
     <div class="brand-sub">Laboratory Management System</div>
   </div>
   <ul id="menu"></ul>
@@ -1584,7 +1584,7 @@
     <div class="login-card">
       <div class="login-brand">
         <div class="brand-label">Laboratory Management</div>
-        <div class="brand-name" style="font-family:'Playfair Display',serif;font-size:26px;">PASH-ARW-HQ</div>
+        <div class="brand-name" style="font-family:'Playfair Display',serif;font-size:26px;">PASH-PEMA</div>
         <div class="brand-sub">Advanced DNA Testing System</div>
       </div>
 
@@ -1642,7 +1642,7 @@
         <div class="fp-sub">Enter your registered email address. We'll send a 5-digit OTP valid for 5 minutes.</div>
         <div class="login-field">
           <label>Registered Email</label>
-          <input id="fARW-HQil" class="inp" type="email" placeholder="you@example.com" autocomplete="email"
+          <input id="fpEmail" class="inp" type="email" placeholder="you@example.com" autocomplete="email"
             onkeydown="if(event.key==='Enter')fpSendOtp()">
         </div>
         <div id="fpStep1Error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:10px;"></div>
@@ -1653,7 +1653,7 @@
       <div class="fp-step" id="fpStep2">
         <button class="fp-back-btn" onclick="fpGoStep(1)">← Back</button>
         <div class="fp-title">Enter OTP</div>
-        <div class="fp-sub" id="fpOtpSub">A 5-digit code has been sent to <strong id="fARW-HQilDisplay"></strong></div>
+        <div class="fp-sub" id="fpOtpSub">A 5-digit code has been sent to <strong id="fpEmailDisplay"></strong></div>
         <div class="otp-row">
           <input class="otp-digit" id="otp0" maxlength="1" inputmode="numeric" pattern="[0-9]" onkeydown="otpKeyDown(event,0)" oninput="otpInput(event,0)">
           <input class="otp-digit" id="otp1" maxlength="1" inputmode="numeric" pattern="[0-9]" onkeydown="otpKeyDown(event,1)" oninput="otpInput(event,1)">
@@ -1746,7 +1746,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
           <div class="login-field" style="margin:0;">
             <label>Email <span style="color:var(--red);">*</span></label>
-            <input id="helARW-HQil" class="inp" type="email" placeholder="your@email.com">
+            <input id="helpEmail" class="inp" type="email" placeholder="your@email.com">
           </div>
           <div class="login-field" style="margin:0;">
             <label>Phone</label>
@@ -3013,7 +3013,7 @@ function dldetailURL(code) {
       document.body.style.cssText = 'margin:0;background:#0a1628;display:flex;align-items:center;justify-content:center;height:100vh;font-family:DM Sans,sans-serif;color:#e8edf5;';
       document.body.innerHTML = `
         <div style="text-align:center;">
-          <div style="font-size:12px;letter-spacing:3px;color:#00c2a8;font-family:monospace;margin-bottom:14px;">PASH-ARW-HQ LMIS</div>
+          <div style="font-size:12px;letter-spacing:3px;color:#00c2a8;font-family:monospace;margin-bottom:14px;">PASH-PEMA LMIS</div>
           <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Preparing Detailed Report…</div>
           <div style="font-size:13px;color:#6b82a0;">Your PDF will download automatically.</div>
           <div id="dlMsg" style="margin-top:18px;font-size:12px;color:#6b82a0;"></div>
@@ -3080,7 +3080,7 @@ function dldetailURL(code) {
       <div id="verifyWrap" style="min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:32px 20px 40px;background:#0a1628;font-family:'DM Sans',sans-serif;">
         <div style="width:100%;max-width:520px;">
           <div style="text-align:center;margin-bottom:28px;">
-            <div style="font-size:12px;letter-spacing:3px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:8px;">PASH-ARW-HQ LMIS</div>
+            <div style="font-size:12px;letter-spacing:3px;color:#00c2a8;font-family:'DM Mono',monospace;margin-bottom:8px;">PASH-PEMA LMIS</div>
             <div style="font-size:22px;font-weight:700;color:#e8edf5;">${isPayMode ? 'Payment Verification' : isDetailMode ? 'Detailed Report Verification' : 'Report Verification'}</div>
             <div style="font-size:13px;color:#6b82a0;margin-top:4px;">Scan verified — fetching record…</div>
           </div>
@@ -3091,7 +3091,7 @@ function dldetailURL(code) {
             </div>
           </div>
           <div style="text-align:center;margin-top:20px;font-size:11px;color:#3a5070;">
-            PASH-ARW-HQ Laboratory Management Information System
+            PASH-PEMA Laboratory Management Information System
           </div>
         </div>
       </div>
@@ -3162,7 +3162,7 @@ function dldetailURL(code) {
           </div>`}
 
           <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#3a5070;text-align:center;">
-            ✅ This receipt was issued by PASH-ARW-HQ LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
+            ✅ This receipt was issued by PASH-PEMA LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
           </div>
         `;
       } else if (isDetailMode) {
@@ -3207,7 +3207,7 @@ function dldetailURL(code) {
           </div>`}
 
           <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#3a5070;text-align:center;">
-            ✅ This detailed report was issued by PASH-ARW-HQ LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
+            ✅ This detailed report was issued by PASH-PEMA LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
           </div>
         `;
       } else {
@@ -3239,7 +3239,7 @@ function dldetailURL(code) {
           </div>`}
 
           <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#3a5070;text-align:center;">
-            ✅ This report was issued by PASH-ARW-HQ LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
+            ✅ This report was issued by PASH-PEMA LMIS &nbsp;·&nbsp; Verified ${new Date().toLocaleString()}
           </div>
         `;
       }
@@ -3923,15 +3923,15 @@ function createCustomer(){
   const dupPhone  = Object.values(customers).find(c => c.phone === phone);
   if(dupPhone){ toast('A customer with this phone already exists: '+dupPhone.id,'err'); return; }
   if(email){
-    const duARW-HQil = Object.values(customers).find(c => (c.email||'').toLowerCase() === email.toLowerCase());
-    if(duARW-HQil){ toast('Email already used by: '+duARW-HQil.id,'err'); return; }
+    const dupEmail = Object.values(customers).find(c => (c.email||'').toLowerCase() === email.toLowerCase());
+    if(dupEmail){ toast('Email already used by: '+dupEmail.id,'err'); return; }
   }
 
   let counter = parseInt(dbGet('customerCounter')||'0');
   if(counter > 100000) counter = 0;
   counter += 1;
   dbSet('customerCounter', String(counter));
-  const id = 'ARW-HQ-CIF-' + String(counter).padStart(3,'0');
+  const id = 'PEMA-CIF-' + String(counter).padStart(3,'0');
 
   customers[id] = { id, phone, name, type, email, portalPassword: password, org, address, notes,
     registeredBy: currentUser,
@@ -4158,8 +4158,8 @@ function saveCustomerEdit(id){
   const dupPhone  = Object.values(customers).find(c => c.phone===phone && c.id!==id);
   if(dupPhone){ toast('Phone already used by: '+dupPhone.id,'err'); return; }
   if(email){
-    const duARW-HQil = Object.values(customers).find(c => (c.email||'').toLowerCase()===email.toLowerCase() && c.id!==id);
-    if(duARW-HQil){ toast('Email already used by: '+duARW-HQil.id,'err'); return; }
+    const dupEmail = Object.values(customers).find(c => (c.email||'').toLowerCase()===email.toLowerCase() && c.id!==id);
+    if(dupEmail){ toast('Email already used by: '+dupEmail.id,'err'); return; }
   }
   const updated = { ...customers[id], phone, name, type, email, org, address, notes,
     lastEditedBy: currentUser, lastEditedOn: new Date().toLocaleString() };
@@ -4416,7 +4416,7 @@ function createSample(){
   if(counter > 100000) counter = 0;
   counter += 1;
   dbSet('sampleCounter', String(counter));
-  const code = 'ARW-HQ-' + String(counter).padStart(5,'0');
+  const code = 'PEMA-' + String(counter).padStart(5,'0');
   samples[code] = {
     name, date:dt, details, location,
     customerId: selectedCustomerId || '',
@@ -4675,7 +4675,7 @@ async function generateDetailedReportDataUri(code){
   doc.setTextColor(232,237,245);
   doc.setFontSize(15);
   doc.setFont(undefined,'bold');
-  doc.text('PASH-ARW-HQ — Detailed Test Report',105,21,null,null,'center');
+  doc.text('PASH-PEMA — Detailed Test Report',105,21,null,null,'center');
 
   doc.setTextColor(50,50,80);
   doc.setFontSize(10);
@@ -4725,7 +4725,7 @@ async function generateDetailedReportDataUri(code){
   }
 
   doc.setFontSize(8); doc.setTextColor(150);
-  doc.text('Generated by PASH-ARW-HQ LMIS — '+new Date().toLocaleString(),105,289,null,null,'center');
+  doc.text('Generated by PASH-PEMA LMIS — '+new Date().toLocaleString(),105,289,null,null,'center');
 
   // Return as a data URI — self-contained, works in any PDF viewer, never expires
   return doc.output('datauristring');
@@ -4765,7 +4765,7 @@ async function downloadDetailedReportPDF(code){
   doc.setTextColor(232,237,245);
   doc.setFontSize(15);
   doc.setFont(undefined,'bold');
-  doc.text('PASH-ARW-HQ — Detailed Test Report',105,21,null,null,'center');
+  doc.text('PASH-PEMA — Detailed Test Report',105,21,null,null,'center');
 
   // Meta
   doc.setTextColor(50,50,80);
@@ -4819,7 +4819,7 @@ async function downloadDetailedReportPDF(code){
   }
 
   doc.setFontSize(8); doc.setTextColor(150);
-  doc.text('Generated by PASH-ARW-HQ LMIS — '+new Date().toLocaleString(),105,289,null,null,'center');
+  doc.text('Generated by PASH-PEMA LMIS — '+new Date().toLocaleString(),105,289,null,null,'center');
   doc.save('DetailedReport_'+code+'.pdf');
   toast('Detailed report downloaded');
 }
@@ -4883,7 +4883,7 @@ async function downloadPDF(code){
   doc.setTextColor(232,237,245);
   doc.setFontSize(16);
   doc.setFont(undefined,'bold');
-  doc.text('PASH-ARW-HQ Lab Report',105,20,null,null,'center');
+  doc.text('PASH-PEMA Lab Report',105,20,null,null,'center');
 
   doc.setTextColor(50,50,80);
   doc.setFontSize(10);
@@ -4997,7 +4997,7 @@ async function downloadPDF(code){
 
   doc.setFontSize(8);
   doc.setTextColor(150);
-  doc.text('Generated by PASH-ARW-HQ LMIS — '+new Date().toLocaleString(), 105, 286, null, null, 'center');
+  doc.text('Generated by PASH-PEMA LMIS — '+new Date().toLocaleString(), 105, 286, null, null, 'center');
   doc.save('Report_'+code+'.pdf');
   toast('Report downloaded');
 }
@@ -5123,7 +5123,7 @@ function downloadAccountingPDF(){
   doc.setTextColor(232,237,245);
   doc.setFontSize(15);
   doc.setFont(undefined,'bold');
-  doc.text('PASH-ARW-HQ — Accounting Report', 105, 21, null, null, 'center');
+  doc.text('PASH-PEMA — Accounting Report', 105, 21, null, null, 'center');
 
   doc.setTextColor(50,50,80);
   doc.setFontSize(9);
@@ -5167,7 +5167,7 @@ function downloadAccountingPDF(){
 
   doc.setFontSize(8);
   doc.setTextColor(150);
-  doc.text('Generated by PASH-ARW-HQ LMIS — '+new Date().toLocaleString(), 105, 285, null, null, 'center');
+  doc.text('Generated by PASH-PEMA LMIS — '+new Date().toLocaleString(), 105, 285, null, null, 'center');
   doc.save('Accounting_Report_'+Date.now()+'.pdf');
   toast('Accounting report exported');
 }
@@ -5249,7 +5249,7 @@ async function downloadReceiptPDF(code){
   doc.setTextColor(0,194,168);
   doc.setFontSize(7);
   doc.setFont(undefined,'normal');
-  doc.text('PASH-ARW-HQ LABORATORY MANAGEMENT SYSTEM', W/2, 10, null,null,'center');
+  doc.text('PASH-PEMA LABORATORY MANAGEMENT SYSTEM', W/2, 10, null,null,'center');
   doc.setTextColor(232,237,245);
   doc.setFontSize(14);
   doc.setFont(undefined,'bold');
@@ -5359,7 +5359,7 @@ async function downloadReceiptPDF(code){
   doc.setFontSize(6.5);
   doc.setFont(undefined,'normal');
   doc.text('This is a computer-generated receipt and does not require a signature.', W/2, H-18, null,null,'center');
-  doc.text('PASH-ARW-HQ Laboratory Management System', W/2, H-12, null,null,'center');
+  doc.text('PASH-PEMA Laboratory Management System', W/2, H-12, null,null,'center');
   doc.text('Generated: '+new Date().toLocaleString(), W/2, H-6, null,null,'center');
 
   doc.save('Receipt_'+code+'.pdf');
@@ -5493,7 +5493,7 @@ function exportToExcel(){
   });
 
   const summaryData = [
-    ['PASH-ARW-HQ LMIS — Export Summary'],
+    ['PASH-PEMA LMIS — Export Summary'],
     [''],
     ['Generated',       new Date().toLocaleString()],
     ['Date Range',      (from||'All') + ' to ' + (to||'All')],
@@ -5516,7 +5516,7 @@ function exportToExcel(){
 
   // ── Filename ──
   const datePart = (from||to) ? `_${from||'start'}_to_${to||'end'}` : '_all';
-  const filename = `ARW-HQ_Export${datePart}_${new Date().toISOString().substring(0,10)}.xlsx`;
+  const filename = `PEMA_Export${datePart}_${new Date().toISOString().substring(0,10)}.xlsx`;
 
   XLSX.writeFile(wb, filename);
   toast(`Exported ${rows.length} records to Excel`);
@@ -5543,7 +5543,7 @@ function openHelpDrawer(){
   document.getElementById('helpFormState').style.display = '';
   document.getElementById('helpSuccessState').style.display = 'none';
   document.getElementById('helpName').value = '';
-  document.getElementById('helARW-HQil').value = '';
+  document.getElementById('helpEmail').value = '';
   document.getElementById('helpPhone').value = '';
   document.getElementById('helpMessage').value = '';
   document.getElementById('helpFormError').textContent = '';
@@ -5570,7 +5570,7 @@ function selectHelpType(btn, type){
 
 function submitHelpQuery(){
   const name    = document.getElementById('helpName').value.trim();
-  const email   = document.getElementById('helARW-HQil').value.trim();
+  const email   = document.getElementById('helpEmail').value.trim();
   const phone   = document.getElementById('helpPhone').value.trim();
   const message = document.getElementById('helpMessage').value.trim();
   const type    = document.getElementById('helpQueryType').value;
@@ -5974,7 +5974,7 @@ let fpTimerInterval = null;
 function openForgotPassword(){
   fpReset();
   document.getElementById('fpOverlay').classList.add('show');
-  setTimeout(()=>{ document.getElementById('fARW-HQil').focus(); }, 280);
+  setTimeout(()=>{ document.getElementById('fpEmail').focus(); }, 280);
 }
 
 function closeForgotPassword(){
@@ -5988,7 +5988,7 @@ function fpReset(){
   fpOtpExpiry     = null;
   clearInterval(fpTimerInterval);
   // clear all inputs
-  ['fARW-HQil','fpNewPass','fpConfirmPass'].forEach(id=>{
+  ['fpEmail','fpNewPass','fpConfirmPass'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value = '';
   });
@@ -6016,7 +6016,7 @@ function fpGoStep(n){
 
 // ── STEP 1: Send OTP ──
 async function fpSendOtp(){
-  const email = document.getElementById('fARW-HQil').value.trim().toLowerCase();
+  const email = document.getElementById('fpEmail').value.trim().toLowerCase();
   const errEl = document.getElementById('fpStep1Error');
   errEl.textContent = '';
 
@@ -6055,7 +6055,7 @@ async function fpDispatchOtp(email, name, fromStep){
       to_name:     name || email,
       otp:         fpGeneratedOtp,
       expiry_mins: '5',
-      app_name:    'PASH-ARW-HQ LMIS',
+      app_name:    'PASH-PEMA LMIS',
       user_email:  email,
       user_name:   name || email,
       passcode:    fpGeneratedOtp,
@@ -6065,7 +6065,7 @@ async function fpDispatchOtp(email, name, fromStep){
     const response = await emailjs.send(FP_SERVICE, FP_TEMPLATE, templateParams);
     console.log('EmailJS success:', response.status, response.text);
 
-    document.getElementById('fARW-HQilDisplay').textContent = email;
+    document.getElementById('fpEmailDisplay').textContent = email;
     fpGoStep(2);
     fpStartTimer();
 
