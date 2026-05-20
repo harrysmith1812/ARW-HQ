@@ -6942,6 +6942,19 @@ const _origShow = show;
 // ══ END DISABLE RIGHT-CLICK ON LOGIN SCREEN ══
 
 (async function init(){
+  // Skip the full app init when we're in a special URL-param mode.
+  // These modes (dldetail, detail, view, pay) replace document.body entirely
+  // via their own DOMContentLoaded handlers in checkVerifyMode().
+  // Running init() concurrently causes: (1) a second racing loadDB() call,
+  // (2) showLoader() / recordVisitorLog() / restoreSession() trying to access
+  //     DOM elements (sidebar, loginScreen, etc.) that no longer exist after
+  //     checkVerifyMode replaces the body — corrupting execution flow and
+  //     producing "Sample code not found" even when the data loaded correctly.
+  const _sp = new URLSearchParams(window.location.search);
+  if (_sp.get('dldetail') || _sp.get('detail') || _sp.get('view') || _sp.get('pay')) {
+    return; // let checkVerifyMode() handle everything
+  }
+
   showLoader('Connecting to database…');
   document.getElementById('dbInitOverlay') && (document.getElementById('dbInitOverlay').style.display = 'flex');
   await loadDB();
