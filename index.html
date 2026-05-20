@@ -2705,7 +2705,7 @@
       <div class="dr-word-count" id="drWordCount">0 words</div>
       <div style="display:flex;gap:10px;">
         <button class="btn-ghost" onclick="closeDetailedResults()">Cancel</button>
-        <button class="btn-sm" onclick="saveDetailedResults()" style="padding:10px 28px;">💾 Save Results</button>
+        <button id="drSaveBtn" class="btn-sm" onclick="drSave()" style="padding:10px 28px;">💾 Save Results</button>
       </div>
     </div>
   </div>
@@ -4535,25 +4535,51 @@ function closeDetailedResults(){
   drCurrentCode = null;
 }
 
-function saveDetailedResults(){
+async function drSave(){
+  const btn = document.getElementById('drSaveBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Saving…'; }
+  await saveDetailedResults();
+  if(btn){ btn.disabled = false; btn.textContent = '💾 Save Results'; }
+}
+
+async function saveDetailedResults(){
   if(!drCurrentCode){ toast('No record selected','err'); return; }
   const samples = JSON.parse(dbGet('samples')||'{}');
   if(!samples[drCurrentCode]){ toast('Record not found','err'); return; }
   samples[drCurrentCode].detailedResultsText = document.getElementById('detailedResultsEditor').innerHTML;
-  dbSet('samples', JSON.stringify(samples));
-  toast('✓ Detailed results saved');
-  closeDetailedResults();
-  renderResultTable();
-  const viewPanel = document.getElementById('view');
-  if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
+  // Update in-memory DB directly so binPut sends the latest data
+  DB.samples = samples;
+  // Persist to server and wait for confirmation before closing
+  try {
+    await binPut('samples', { samples: DB.samples });
+    toast('✓ Detailed results saved & synced');
+    closeDetailedResults();
+    renderResultTable();
+    const viewPanel = document.getElementById('view');
+    if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
+  } catch(err) {
+    console.error('saveDetailedResults sync error:', err);
+    toast('⚠️ Saved locally but failed to sync to server — try again.', 'err');
+    // Still close and re-render so local state is consistent
+    closeDetailedResults();
+    renderResultTable();
+    const viewPanel = document.getElementById('view');
+    if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
+  }
 }
 
-function removeDetailedResults(code){
+async function removeDetailedResults(code){
   const samples = JSON.parse(dbGet('samples')||'{}');
   if(!samples[code]) return;
   delete samples[code].detailedResultsText;
-  dbSet('samples', JSON.stringify(samples));
-  toast('Detailed results removed');
+  DB.samples = samples;
+  try {
+    await binPut('samples', { samples: DB.samples });
+    toast('Detailed results removed');
+  } catch(err) {
+    console.error('removeDetailedResults sync error:', err);
+    toast('⚠️ Removed locally but failed to sync — try again.', 'err');
+  }
   renderResultTable();
   const viewPanel = document.getElementById('view');
   if(viewPanel && viewPanel.classList.contains('active')) renderViewTable();
